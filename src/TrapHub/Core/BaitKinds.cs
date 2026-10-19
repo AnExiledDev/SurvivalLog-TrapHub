@@ -2,7 +2,7 @@ namespace TrapHub.Core;
 
 /// <summary>
 /// A bait's kind, read off the start of its effect line (Config_TrapBait.Effect_Des_Local), which the game writes in
-/// Chinese whatever the player's language: "广谱诱饵 · ..." for universal bait and so on.
+/// Chinese whatever the player's language: "广谱诱饵 - ..." for universal bait and so on.
 /// </summary>
 public static class BaitKinds
 {

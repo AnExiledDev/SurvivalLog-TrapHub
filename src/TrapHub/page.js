@@ -253,7 +253,7 @@
 
     root.id = 'th-root';
     toast.id = 'th-toast';
-    put(head, el('div', 'th-title', 'Trap Hub'), sub, button('×', 'close', null, true, 'th-x'));
+    put(head, el('div', 'th-title', 'Trap Hub'), sub, button('\u00d7', 'close', null, true, 'th-x'));
     put(foot, status, keys);
     put(plate, head, tabs, body, foot);
     root.appendChild(plate);
@@ -613,7 +613,7 @@
     var card = el('div', 'th-card' + (trap.id === state.sel ? ' th-sel' : ''));
     var main = el('div');
     var right = el('div', 'th-rt');
-    var check = button(state.checks[trap.id] ? '✓' : '', 'check', trap.id, true, 'th-chk' + (state.checks[trap.id] ? ' th-on' : ''));
+    var check = button(state.checks[trap.id] ? '\u2713' : '', 'check', trap.id, true, 'th-chk' + (state.checks[trap.id] ? ' th-on' : ''));
     var name = put(el('div', 'th-nm'), el('span', '', type.name), stateBadge(trap));
 
     card.setAttribute('data-act', 'pick');
@@ -660,7 +660,7 @@
 
     var type = typeOf(trap.type);
     var head = put(el('div', 'th-dhead'), icon(type, 'th-i56'),
-      put(el('div', ''), el('div', 'th-big', type.name), el('div', 'th-dim', trap.room + ' · ' + say('floor', trap.floor))));
+      put(el('div', ''), el('div', 'th-big', type.name), el('div', 'th-dim', trap.room + ' \u00b7 ' + say('floor', trap.floor))));
     var isArmed = state.armed === 'dismantle|' + trap.id;
     var acts = put(el('div', 'th-bar'),
       button(say('take'), 'take', trap.id, trap.canTake && !trap.queued, 'th-hot'),
@@ -709,7 +709,7 @@
       rows.appendChild(row);
     });
 
-    if (preset.lastResort) rows.appendChild(put(el('div', 'th-row th-dim'), el('span', '', '∞'), el('span', 'th-grow', say('lastResort'))));
+    if (preset.lastResort) rows.appendChild(put(el('div', 'th-row th-dim'), el('span', '', '\u221e'), el('span', 'th-grow', say('lastResort'))));
 
     return rows;
   }
@@ -720,7 +720,7 @@
     (trap.odds || []).forEach(function (o) {
       var prey = preyOf(o.prey);
 
-      box.appendChild(put(el('div', 'th-row'), icon(prey, 'th-i22'), el('span', 'th-grow', prey.name + (prey.rare ? ' ★' : '')), el('span', 'th-num', o.pct + '%')));
+      box.appendChild(put(el('div', 'th-row'), icon(prey, 'th-i22'), el('span', 'th-grow', prey.name + (prey.rare ? ' \u2605' : '')), el('span', 'th-num', o.pct + '%')));
     });
 
     return box;
@@ -828,7 +828,7 @@
 
     d.steps.forEach(function (step, i) { editor.appendChild(stepEditor(step, i, d.steps.length)); });
 
-    if (d.lastResort) editor.appendChild(put(el('div', 'th-row th-dim'), el('span', 'th-ord', '∞'), el('span', 'th-grow', say('lastResort'))));
+    if (d.lastResort) editor.appendChild(put(el('div', 'th-row th-dim'), el('span', 'th-ord', '\u221e'), el('span', 'th-grow', say('lastResort'))));
 
     put(editor, el('div', 'th-sect', say('addBait')), addPicker(),
       setting(say('lastResort'), toggle(d.lastResort, 'lastresort', say(d.lastResort ? 'on' : 'off'))),
@@ -865,7 +865,7 @@
     var label = put(el('div', ''), el('b', '', bait.name));
     var keep = put(el('div', 'th-bar'), el('span', 'th-dim', say('keep')), button('-', 'keepless', i, step.keep > 0, 'th-sm'),
       el('span', 'th-num', String(step.keep)), button('+', 'keepmore', i, step.keep < MAX_KEEP, 'th-sm'));
-    var moves = put(el('div', 'th-bar'), button('↑', 'stepup', i, i > 0, 'th-sm'), button('↓', 'stepdown', i, i < count - 1, 'th-sm'),
+    var moves = put(el('div', 'th-bar'), button('\u2191', 'stepup', i, i > 0, 'th-sm'), button('\u2193', 'stepdown', i, i < count - 1, 'th-sm'),
       button(say('remove'), 'stepdel', i, true, 'th-sm th-danger'));
 
     if (!allowed) label.appendChild(put(el('div', 'th-red'), el('span', '', say('notAllowed') + ' '), button(say('allow'), 'allow', '1|' + step.item, true, 'th-sm')));
@@ -1103,7 +1103,7 @@
     var card = el('div', 'th-bait' + (allowed ? '' : ' th-off'));
     var have = owned(b.id);
     var draws = (b.draws || []).slice(0, 3).map(function (id) { return preyOf(id).name; });
-    var text = put(el('span', ''), el('b', '', b.name), el('small', '', say(KIND_WORD[b.kind] || 'kOther') + (have ? ' · ' + say('own', have) : '')));
+    var text = put(el('span', ''), el('b', '', b.name), el('small', '', say(KIND_WORD[b.kind] || 'kOther') + (have ? ' \u00b7 ' + say('own', have) : '')));
 
     if (draws.length) text.appendChild(el('small', '', say('draws', draws.join(', '))));
 

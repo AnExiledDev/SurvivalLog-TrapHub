@@ -102,7 +102,7 @@ public class TextsAndSoundsTests
     [Fact]
     public void Bait_kinds_are_read_off_the_games_effect_line()
     {
-        Assert.Equal(BaitKind.Universal, BaitKinds.FromEffect(" 广谱诱饵 · 吸引多种猎物"));
+        Assert.Equal(BaitKind.Universal, BaitKinds.FromEffect(" 广谱诱饵 \u00b7 吸引多种猎物"));
         Assert.Equal(BaitKind.Specialized, BaitKinds.FromEffect("专精诱饵"));
         Assert.Equal(BaitKind.Other, BaitKinds.FromEffect(null));
     }
