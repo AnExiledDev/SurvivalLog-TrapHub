@@ -1,0 +1,382 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using TrapHub.Core;
+using UnityEngine;
+
+namespace TrapHub.Adapters;
+
+/// <summary>
+/// The window's game side, run once a frame: its open state, the view and catalog it sends to page.js, the HUD
+/// button's badge, the presses and preset edits the page asks for, and the auto re-bait pass. Page messages arrive on
+/// the web view's thread, so they are queued and handled here, in this frame.
+/// </summary>
+internal sealed class TrapSession
+{
+    private const float OpenRefreshSeconds = 1f;
+    private const float ClosedRefreshSeconds = 3f;
+    private const float AutoSeconds = 5f;
+
+    private readonly ITrapGame _game;
+    private readonly WebPage _page;
+    private readonly WebKeyboard _keyboard = new();
+    private readonly PresetFileOnDisk _file;
+    private readonly Action<SoundGroup, SoundMode> _saveSound;
+    private readonly Action<string> _log;
+    private readonly Dictionary<long, float> _retryAt = new();
+
+    private PresetBook? _book;
+    private KeyCode _panelKey;
+    private IReadOnlyDictionary<SoundGroup, SoundMode> _sounds = new Dictionary<SoundGroup, SoundMode>();
+    private bool _isSoundsElsewhere;
+
+    private bool _isOpen;
+    private string _shownView = "";
+    private TrapCatalog? _sentCatalog;
+    private int? _sentBadge;
+    private bool? _sentLive;
+    private float _nextRefreshAt;
+    private float _nextAutoAt;
+    private TrapWorld? _lastWorld;
+
+    public TrapSession(ITrapGame game, WebPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<string> log)
+    {
+        _game = game;
+        _page = page;
+        _file = file;
+        _saveSound = saveSound;
+        _log = log;
+    }
+
+    private static bool IsChinese => GameLanguage.IsChinese();
+
+    /// <summary>Called on the main thread at start and after each settings change; the page hears the key at the next refresh.</summary>
+    public void UseControls(KeyCode panelKey)
+    {
+        _panelKey = panelKey;
+        _sentLive = null;
+    }
+
+    public void UseSounds(IReadOnlyDictionary<SoundGroup, SoundMode> sounds, bool isSoundsElsewhere)
+    {
+        _sounds = sounds;
+        _isSoundsElsewhere = isSoundsElsewhere;
+        _shownView = "";
+    }
+
+    public void Update()
+    {
+        var now = Time.unscaledTime;
+
+        _page.KeepInstalled(now);
+        SoundGate.Tick(now);
+
+        while (PageMessages.TryTake(out var command)) HandleSafely(command);
+
+        if (!_keyboard.IsClaimed && _panelKey != KeyCode.None && Input.GetKeyDown(_panelKey))
+        {
+            Toggle();
+
+            return;
+        }
+
+        if (_isOpen && !_keyboard.IsClaimed && Input.GetKeyDown(KeyCode.Escape))
+        {
+            Close();
+
+            return;
+        }
+
+        if (now >= _nextRefreshAt) Refresh(now);
+        if (now >= _nextAutoAt) RunAuto(now);
+    }
+
+    /// <summary>One command that throws must not cost the rest of the frame its commands or the key checks.</summary>
+    private void HandleSafely(PageCommand command)
+    {
+        try
+        {
+            Handle(command);
+        }
+        catch (Exception ex)
+        {
+            _log($"page command {command} failed: {ex}");
+            _page.Status(Texts.Failed.Pick(IsChinese));
+        }
+    }
+
+    private void Handle(PageCommand command)
+    {
+        switch (command)
+        {
+            case PageCommand.Toggle:
+                Toggle();
+                break;
+            case PageCommand.Close:
+                Close();
+                break;
+            case PageCommand.Ready:
+                _log("page script ready");
+                _sentLive = null;
+                _sentBadge = null;
+                _sentCatalog = null;
+                _shownView = "";
+                _nextRefreshAt = 0f;
+                break;
+            case PageCommand.NoScript:
+                _page.Install();
+                break;
+            case PageCommand.Note note:
+                _log("page: " + note.Text);
+                break;
+            case PageCommand.Focus focus:
+                if (focus.IsTyping) _keyboard.Claim();
+                else _keyboard.Release();
+                break;
+            case PageCommand.TakeAll:
+                Press("take all", () => TrapRun.TakeAll(_game, null));
+                break;
+            case PageCommand.TakeFloor:
+                Press("take this floor", () => TrapRun.TakeAll(_game, _lastWorld?.PlayerFloor));
+                break;
+            case PageCommand.RebaitAll:
+                Press("re-bait all", () => TrapRun.RebaitAll(_game, Book()));
+                break;
+            case PageCommand.Rebait rebait:
+                Press($"re-bait {rebait.TrapId}", () => TrapRun.Rebait(_game, Book(), rebait.TrapId));
+                break;
+            case PageCommand.Take take:
+                Press($"take {take.TrapId}", () => TrapRun.Take(_game, take.TrapId));
+                break;
+            case PageCommand.Dismantle dismantle:
+                Press($"dismantle {dismantle.TrapId}", () => TrapRun.Dismantle(_game, dismantle.TrapId));
+                break;
+            case PageCommand.Assign assign:
+                Keep(BookEdits.Assign(Book(), SaveSlot.CurrentKey(), assign, IsChinese));
+                break;
+            case PageCommand.SavePreset save:
+                Keep(BookEdits.SavePreset(Book(), save.Json, IsChinese));
+                break;
+            case PageCommand.DeletePreset delete:
+                Keep(BookEdits.DeletePreset(Book(), delete.PresetId, IsChinese));
+                break;
+            case PageCommand.Allow allow:
+                Keep(BookEdits.Allow(Book(), allow, IsChinese));
+                break;
+            case PageCommand.Sound sound:
+                SetSound(sound.Group, sound.Mode);
+                break;
+            default:
+                throw new InvalidOperationException("unhandled page command " + command);
+        }
+    }
+
+    /// <summary>
+    /// The presets are read from trap-hub.json the first time they are needed. A file that is there but is not a preset
+    /// file is copied aside before a fresh book replaces it, so nothing anyone wrote is lost.
+    /// </summary>
+    private PresetBook Book()
+    {
+        if (_book != null) return _book;
+
+        var text = _file.Read();
+        var book = string.IsNullOrWhiteSpace(text) ? null : PresetJson.ReadBook(text!);
+
+        if (book == null && !string.IsNullOrWhiteSpace(text)) _file.SetAside();
+
+        _book = book ?? PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
+        _log($"presets: {_book.Presets.Count}, allowed bait: {_book.Allowed.Count}");
+
+        return _book;
+    }
+
+    /// <summary>A changed book is used at once and written to disk; a failed write keeps it until the game closes, and says so.</summary>
+    private void Keep(BookEdit edit)
+    {
+        var message = edit.Message;
+
+        if (edit.Book != null)
+        {
+            _book = edit.Book;
+
+            if (!_file.Replace(PresetJson.WriteBook(edit.Book))) message = Texts.NotSaved.Pick(IsChinese);
+        }
+
+        _log(message);
+        _page.Status(message);
+        Redraw();
+    }
+
+    private void SetSound(SoundGroup group, SoundMode mode)
+    {
+        if (_isSoundsElsewhere)
+        {
+            _page.Status(Texts.SoundsElsewhere.Pick(IsChinese));
+
+            return;
+        }
+
+        // Without Exiled's Toolkit a changed setting is not applied again on its own, so the new mode is applied here too.
+        _saveSound(group, mode);
+        _sounds = new Dictionary<SoundGroup, SoundMode>(_sounds) { [group] = mode };
+        SoundGate.Use(_sounds);
+        _page.Status(Texts.SoundSet.Say(IsChinese, Sounds.GroupName(group).Pick(IsChinese), Sounds.ModeLabel(mode).Pick(IsChinese)));
+        Redraw();
+    }
+
+    /// <summary>
+    /// Reads the traps once: the HUD button shows while there is a home to manage, its badge counts traps that need the
+    /// player, and an open window is redrawn when its view changed. A read that throws is logged by the game adapter and
+    /// read as not ready, so the window stays up with the reason instead of holding the game's input with nothing in it.
+    /// </summary>
+    private void Refresh(float now)
+    {
+        _nextRefreshAt = now + (_isOpen ? OpenRefreshSeconds : ClosedRefreshSeconds);
+
+        var read = _game.Read();
+        var world = (read as TrapRead.Ready)?.World;
+
+        _lastWorld = world;
+        SendLive(world != null);
+        SendBadge(world == null ? 0 : TrapView.NeedsYou(world));
+
+        if (_isOpen) Show(read, isOpening: false);
+    }
+
+    private void SendLive(bool isLive)
+    {
+        if (isLive == _sentLive) return;
+        if (_page.Live(isLive, _panelKey == KeyCode.None ? "" : _panelKey.ToString())) _sentLive = isLive;
+
+        _log($"HUD button {(isLive ? "shown" : "hidden")}");
+    }
+
+    private void SendBadge(int count)
+    {
+        if (count == _sentBadge) return;
+        if (_page.Badge(count)) _sentBadge = count;
+    }
+
+    private void Toggle()
+    {
+        if (_isOpen) Close();
+        else Open();
+    }
+
+    /// <summary>With no game loaded there is nothing to show and the window stays shut; anything else opens it.</summary>
+    private void Open()
+    {
+        var read = _game.Read();
+
+        if (read is TrapRead.NoGame)
+        {
+            _page.Status(Texts.NoGame.Pick(IsChinese));
+
+            return;
+        }
+
+        _isOpen = true;
+        InputGate.PanelOpened();
+        Show(read, isOpening: true);
+        _log("window opened");
+    }
+
+    private void Close()
+    {
+        if (!_isOpen) return;
+
+        _isOpen = false;
+        _keyboard.Release();
+        InputGate.PanelClosed();
+        _page.Close();
+    }
+
+    private void Redraw()
+    {
+        if (_isOpen) Show(_game.Read(), isOpening: false);
+    }
+
+    /// <summary>The catalog goes first, once per game and language, since the view names items only by id.</summary>
+    private void Show(TrapRead read, bool isOpening)
+    {
+        var settings = new ViewSettings(_sounds, _isSoundsElsewhere, _panelKey == KeyCode.None ? "" : _panelKey.ToString());
+        string view;
+
+        switch (read)
+        {
+            case TrapRead.Ready ready:
+                _lastWorld = ready.World;
+                SendCatalog(ready.World.Catalog);
+                view = TrapView.Ready(ready.World, Book(), settings);
+                break;
+            case TrapRead.NotReady notReady:
+                view = TrapView.NotReady(Texts.NotReady.Say(IsChinese, notReady.Reason), settings);
+                break;
+            default:
+                Close();
+                return;
+        }
+
+        if (isOpening)
+        {
+            _shownView = view;
+            _page.Open(view);
+
+            return;
+        }
+
+        if (view == _shownView) return;
+
+        _shownView = view;
+        _page.Show(view);
+    }
+
+    private void SendCatalog(TrapCatalog catalog)
+    {
+        if (ReferenceEquals(catalog, _sentCatalog)) return;
+        if (_page.Catalog(CatalogView.Write(catalog))) _sentCatalog = catalog;
+    }
+
+    /// <summary>
+    /// Re-baits the traps whose preset asks for it, every few seconds. Only a pass that baited something says so, as a
+    /// toast, so a quiet base stays quiet.
+    /// </summary>
+    private void RunAuto(float now)
+    {
+        _nextAutoAt = now + AutoSeconds;
+
+        if (_lastWorld == null || !Book().Presets.Any(preset => preset.Auto != AutoRebait.Off)) return;
+
+        var outcome = TrapRun.Auto(_game, Book(), now, _retryAt);
+
+        if (!TrapMessages.IsWorthShowing(outcome)) return;
+
+        var message = TrapMessages.Describe(outcome, IsChinese, isAuto: true);
+
+        _log("auto: " + message);
+        _page.Status(message);
+        Redraw();
+    }
+
+    /// <summary>Runs one press and shows what it did, then redraws so a queued badge or new count shows at once.</summary>
+    private void Press(string name, Func<TrapOutcome> press)
+    {
+        string message;
+
+        try
+        {
+            var outcome = press();
+
+            message = TrapMessages.Describe(outcome, IsChinese);
+            _log($"{name}: {outcome} -> {message}");
+        }
+        catch (Exception ex)
+        {
+            message = Texts.Failed.Pick(IsChinese);
+            _log($"{name} failed: {ex}");
+        }
+
+        _page.Status(message);
+        Redraw();
+    }
+}
