@@ -22,6 +22,7 @@ internal sealed class WebPage
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
+    private bool? _wordsAreChinese;
 
     public WebPage(Action<string> log)
     {
@@ -38,8 +39,13 @@ internal sealed class WebPage
 
     public void Install()
     {
+        _wordsAreChinese = null;
+
         if (Run(Script())) _log("page script sent to the web UI");
     }
+
+    /// <summary>The page lost its script, or loaded it afresh, so its words go with the next call.</summary>
+    public void ForgetWords() => _wordsAreChinese = null;
 
     public void Open(string viewJson) => Call($"open({viewJson})");
 
@@ -59,8 +65,20 @@ internal sealed class WebPage
     /// <summary>The count badge on the HUD button, sent whether or not the window is open.</summary>
     public bool Badge(int count) => Call($"badge({count})");
 
-    /// <summary>Every call hands the page its words first, so a switch of the game's language shows at the next redraw.</summary>
-    private bool Call(string expression) => Run($"{PageWords.Script(GameLanguage.IsChinese())}window.__sltraphub?window.__sltraphub.{expression}:{NoScriptReply}");
+    /// <summary>
+    /// The page's words go with the first call after a load and again whenever the game's language changes; resending
+    /// the whole table with every call was most of what each refresh cost the web view.
+    /// </summary>
+    private bool Call(string expression)
+    {
+        var isChinese = GameLanguage.IsChinese();
+        var words = _wordsAreChinese == isChinese ? "" : PageWords.Script(isChinese);
+        var isRun = Run($"{words}window.__sltraphub?window.__sltraphub.{expression}:{NoScriptReply}");
+
+        if (isRun) _wordsAreChinese = isChinese;
+
+        return isRun;
+    }
 
     private bool Run(string javaScript)
     {

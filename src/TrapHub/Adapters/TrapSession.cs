@@ -14,7 +14,7 @@ namespace TrapHub.Adapters;
 internal sealed class TrapSession
 {
     private const float OpenRefreshSeconds = 1f;
-    private const float ClosedRefreshSeconds = 3f;
+    private const float ClosedRefreshSeconds = 5f;
     private const float AutoSeconds = 5f;
 
     private readonly ITrapGame _game;
@@ -117,6 +117,7 @@ internal sealed class TrapSession
                 break;
             case PageCommand.Ready:
                 _log("page script ready");
+                _page.ForgetWords();
                 _sentLive = null;
                 _sentBadge = null;
                 _sentCatalog = null;

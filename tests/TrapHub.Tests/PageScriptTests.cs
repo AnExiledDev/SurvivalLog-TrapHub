@@ -11,7 +11,7 @@ public class PageScriptTests
 
     private static FakeGame Home() => new()
     {
-        Traps = { T(1, prey: Rabbit), T(2), T(3, floor: 2, type: Net), T(4, floor: -1, bait: Carrot) },
+        Traps = { T(1, prey: Rabbit, state: TrapState.Prey), T(2), T(3, floor: 2, type: Net), T(4, floor: -1, bait: Carrot) },
         Stock = { Bag(1, Carrot, 5), Bag(2, Meat, 2) },
     };
 
@@ -36,8 +36,36 @@ public class PageScriptTests
     {
         var page = Opened();
 
-        Assert.Equal("Floor -1|Floor 1you are here|Floor 2", page.Text("panel().querySelectorAll('.th-sect').map(function (n) { return n.textContent; }).join('|')"));
+        Assert.Equal("Floor -1|Floor 1|Floor 2", page.Text("panel().querySelectorAll('.th-gt').map(function (n) { return n.textContent; }).join('|')"));
+        Assert.Equal("Floor 1", page.Text("panel().querySelectorAll('.th-here').map(function (n) { return n.parentNode.querySelector('.th-gt').textContent; }).join('|')"));
         Assert.Equal(4, (int)double.Parse(page.Text("panelButtons('pick').length")));
+    }
+
+    [Fact]
+    public void The_show_filter_narrows_the_list_to_the_traps_asked_for()
+    {
+        var page = Opened();
+
+        page.Click("panelButton('show','prey')");
+
+        Assert.Equal("1", page.Text("panelButtons('pick').map(function (n) { return n.getAttribute('data-args'); }).join(',')"));
+
+        page.Click("panelButton('show','all')");
+
+        Assert.Equal(4, (int)double.Parse(page.Text("panelButtons('pick').length")));
+    }
+
+    [Fact]
+    public void With_no_trap_picked_a_catch_waiting_is_listed_first_and_opens_its_trap()
+    {
+        var page = Opened();
+
+        Assert.Equal("1", page.Text("panelButtons('goto')[0].getAttribute('data-args')"));
+
+        page.Click("panelButton('goto','1')");
+
+        Assert.True(page.Is("panelButton('take','1')"));
+        Assert.True(page.Is("panelButton('pick','1').className.indexOf('th-sel') >= 0"));
     }
 
     [Fact]
@@ -179,7 +207,7 @@ public class PageScriptTests
 
         ShowTab(page, "allowed");
 
-        Assert.Equal(2, (int)double.Parse(page.Text("panelButtons('allow').filter(function (n) { return !n.hasAttribute('data-shown'); }).length")));
+        Assert.Equal(2, (int)double.Parse(page.Text("panel().querySelectorAll('.th-bait').length")));
 
         page.Click("panelButton('allow','1|202')");
         page.Status("");

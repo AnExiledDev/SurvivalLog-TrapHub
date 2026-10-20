@@ -17,7 +17,7 @@ public sealed record ViewSettings(IReadOnlyDictionary<SoundGroup, SoundMode> Sou
 /// </summary>
 public static class TrapView
 {
-    private const int TopPrey = 3;
+    private const int TopPrey = 6;
 
     public static string NotReady(string note, ViewSettings settings) => Write(json =>
     {

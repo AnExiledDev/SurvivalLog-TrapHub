@@ -7,13 +7,14 @@ Press `J`, or the trap button in the tool column on the left of the screen, to o
 ## Features
 
 - **All traps at a glance**: every trap at home, grouped by floor, with its state (armed, prey, no bait, halted), its bait, its store and how many catches it has left before it breaks.
+- **Find a trap fast**: filter by state (has prey, no bait, about to break, halted), trap type or room, and group by floor, room, type or state. With no trap picked, the window lists the traps that need you; press one to open it. Check several traps to give them a preset together.
 - **Take all**: lines up the walks to every trap with a catch, your floor first, nearest trap first. **Take this floor** does the same for the floor you are on.
 - **Re-bait all**: baits every empty trap from its preset in one press. Each trap and the whole list can also be handled one at a time.
 - **Bait presets**: an ordered list of baits, so when one runs out the next is used. Each step can keep a number back (keep at least 3 meat, say). If every step is out, the preset can fall back to any allowed universal bait.
 - **Per trap or per type**: each trap type has a default preset, and any trap can have its own. A trap's own preset is kept per save.
 - **Where bait comes from**: bag only, or bag first and then home storage, and the food closest to spoiling first.
 - **Auto re-bait**: a preset can bait its empty traps by itself, off, only on your floor, or always.
-- **Allowed bait**: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow baits one at a time, or every bait the filter shows.
+- **Allowed bait**: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow baits one at a time, or every bait the filter shows. Quick picks allow every bait in your presets, or every universal bait you own, in one press. Each bait shows what it attracts, which traps take it and which presets use it.
 - **Catch odds**: each trap shows its likely catches for the bait it holds or would get, by the game's own rates, room and talents included.
 - **Catch sounds**: the sound a trap plays while it holds a catch can play as normal, chime once, or stay muted, for each trap sound. When Quiet Traps is installed, it handles the sounds instead.
 
@@ -48,7 +49,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the f
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.1.1 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
+Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.2.0 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
 
 ## Known issues
 
