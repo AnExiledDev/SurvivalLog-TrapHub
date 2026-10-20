@@ -7,6 +7,8 @@
 
   var PREFIX = 'slmod|traphub|';
   var HUD_CLASS = 'th-hud-btn';
+  // Trap Hub's place in the HUD's tool column when Exiled's Toolkit lays it out in columns of four.
+  var DOCK_ORDER = '10';
   var HUD_STYLE_ID = 'th-hud-style';
   var BUSY_TIMEOUT_MS = 5000;
   var TOAST_MS = 3500;
@@ -1284,7 +1286,10 @@
     if (existing) existing.remove();
 
     addHudStyle(doc);
-    column.insertBefore(hudButton(doc), column.firstChild);
+    var node = hudButton(doc);
+
+    node.setAttribute('data-etk-dock', DOCK_ORDER);
+    column.insertBefore(node, column.firstChild);
 
     if (!hasReportedHudPlaced) send('diag|HUD button placed in the tool column');
     hasReportedHudPlaced = true;
