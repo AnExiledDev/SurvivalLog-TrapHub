@@ -9,6 +9,8 @@
 - The allowed bait tab shows owned bait first, quick picks (every bait in your presets, every universal bait you own) and, for each bait, what it attracts, which traps take it and which presets use it.
 - The window responds faster: picking a trap or a bait no longer redraws the whole window, and each refresh sends far less to the game's web view.
 
+- After a game update, a hook that can no longer be placed is logged as an error, so the Mod Manager can mark the mod as maybe needing an update.
+
 ## 0.1.1
 
 - With Exiled's Toolkit 0.6.0 or later, the HUD button takes its place in the Toolkit's tidy layout of the tool buttons.
