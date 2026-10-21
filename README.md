@@ -24,7 +24,7 @@ Trap Hub does what Trapline does. Use one or the other, not both.
 
 ## Requirements
 
-- Survival Log 1.1.18902. Built for this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.19131. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. Without it, they take effect at the next game start. With 0.6.0 or newer, the HUD's tool buttons are also laid out four high, in columns, when there are more than four.
 
