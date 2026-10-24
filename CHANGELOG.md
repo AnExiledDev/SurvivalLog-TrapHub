@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.0
+
+- A new window: three tabs (Traps, Bait, Settings), traps grouped by room with your floor marked, a Needs you / Armed / All switch and a search box.
+- **Check all traps** collects every catch, then baits every empty trap from its bait preset, the trap you just emptied included. **This floor only**, **Collect only** and **Bait only** sit beside it.
+- J now checks every trap. Shift+J opens the window (new settings `CheckKey` and `PanelKeyShift`).
+- A picked trap shows its catch odds, its bait preset, the next bait, its wear, and Take, Re-bait and Dismantle.
+- The Bait tab holds the preset list, the preset editor and the allowed bait list side by side.
+- Removed: picking several traps to give them a preset together, the filter and group-by side panel, and the separate Take this floor button (use This floor only).
+- Updated for Survival Log 1.1.19611.
+
 ## 0.2.0
 
 - A new look for the window: trap cards with catch chance and wear bars, and a side panel to filter by state, trap type and room.
