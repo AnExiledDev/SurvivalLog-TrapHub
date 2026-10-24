@@ -56,6 +56,8 @@ internal sealed class PageScript
 
     public void Catalog(string catalogJson) => Call($"catalog({catalogJson})");
 
+    public void Hud(string hudJson) => Call($"hud({hudJson})");
+
     public void Badge(int count) => Call($"badge({count})");
 
     public void Close() => Call("close()");

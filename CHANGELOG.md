@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+- The game's own Home Traps list in the HUD gets a **Check traps** button and a **Re-bait** box, beside the list's title like the plants list's Tend Garden button and Replant box.
+- Hover the Check traps button to see what it will do: what it collects and where, what it baits with, how many traps on how many floors, and which traps it leaves and why.
+- Each trap in the list gets a second line: its bait or the bait it gets next, its catch, and how many catches it has left with a wear bar. The list opens wider to fit them, and a line on top counts the catches to collect, the traps to bait and the traps about to break, with a link to the Trap Hub window.
+- A full auto trap now reads "full, collect to restart", and the English status "Deploying Defenses" reads "Armed".
+- After a check, the game's popup shows how many traps it handled ("Check x5").
+- New setting `RebaitOnCheck` (on): whether Check traps also baits the traps it empties. The Re-bait box sets it too. With it off, Check traps baits only traps that were already empty.
+
 ## 0.3.0
 
 - A new window: three tabs (Traps, Bait, Settings), traps grouped by room with your floor marked, a Needs you / Armed / All switch and a search box.

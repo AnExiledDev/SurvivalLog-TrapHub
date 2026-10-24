@@ -36,6 +36,9 @@ public abstract record PageCommand
     /// <summary>Collect every catch, then bait every empty trap; on the player's floor only when IsThisFloor.</summary>
     public sealed record CheckAll(bool IsThisFloor) : PageCommand;
 
+    /// <summary>The Re-bait box beside the HUD's Check traps button: whether a check also baits the traps it empties.</summary>
+    public sealed record RebaitOnCheck(bool IsOn) : PageCommand;
+
     public sealed record Rebait(long TrapId) : PageCommand;
 
     public sealed record Take(long TrapId) : PageCommand;
@@ -80,6 +83,7 @@ public abstract record PageCommand
             ("rebaitall", 1) => new RebaitAll(),
             ("checkall", 1) => new CheckAll(false),
             ("checkfloor", 1) => new CheckAll(true),
+            ("checkrebait", 2) when parts[1] is "0" or "1" => new RebaitOnCheck(parts[1] == "1"),
             ("rebait", 2) when TryId(parts[1], out var id) => new Rebait(id),
             ("take", 2) when TryId(parts[1], out var id) => new Take(id),
             ("dismantle", 2) when TryId(parts[1], out var id) => new Dismantle(id),

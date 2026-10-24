@@ -105,16 +105,17 @@ public static class TrapRun
 
     /// <summary>
     /// Check traps, like the game's Tend Garden for the garden: every catch lined up for collection, then every empty
-    /// trap baited from its preset. A trap still holding its catch takes bait too, so it is armed again once emptied.
+    /// trap baited from its preset. With isRefill, a trap still holding its catch takes bait too, so it is armed again
+    /// once emptied; without it, only traps that are already empty are baited. CheckPlan shows the same choices.
     /// </summary>
     /// <param name="onlyFloor">Null for every floor.</param>
-    public static TrapOutcome CheckAll(ITrapGame game, PresetBook book, int? onlyFloor)
+    public static TrapOutcome CheckAll(ITrapGame game, PresetBook book, int? onlyFloor, bool isRefill = true)
     {
         var take = TakeAll(game, onlyFloor);
 
         if (take is TrapOutcome.NoGame or TrapOutcome.NotReady) return take;
 
-        var bait = WithWorld(game, world => RebaitWhere(game, book, world, trap => onlyFloor == null || trap.Floor == onlyFloor));
+        var bait = WithWorld(game, world => RebaitWhere(game, book, world, trap => CheckPlan.IsBaitWanted(trap, onlyFloor, isRefill)));
 
         return new TrapOutcome.Checked(take, bait);
     }

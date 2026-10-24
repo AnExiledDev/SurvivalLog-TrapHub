@@ -26,6 +26,11 @@ public static class TrapMessages
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "unknown trap outcome"),
     };
 
+    /// <summary>How many traps a check walks to or baits, for the game's own popup ("Check x5"); 0 when it did nothing.</summary>
+    public static int CheckedCount(TrapOutcome outcome) => outcome is TrapOutcome.Checked check
+        ? (check.Take is TrapOutcome.Taking taking ? taking.Count : 0) + (check.Bait is TrapOutcome.Baited baited ? baited.Count : 0)
+        : 0;
+
     /// <summary>Whether the auto pass has anything worth telling the player: only traps it actually baited.</summary>
     public static bool IsWorthShowing(TrapOutcome outcome) => outcome is TrapOutcome.Baited { Count: > 0 };
 

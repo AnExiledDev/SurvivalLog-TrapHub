@@ -17,7 +17,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.3.0";
+    private const string Version = "0.4.0";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
@@ -34,6 +34,9 @@ public sealed class Plugin : BasePlugin
         var checkKey = Config.Bind("General", "CheckKey", KeyCode.J,
             "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. J by default. None turns it off.\n" +
             "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认 J。设为 None 则停用。");
+        var rebaitOnCheck = Config.Bind("General", "RebaitOnCheck", true,
+            "When true, Check traps also baits every trap it empties, in the same trip. When false, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's trap panel sets this too.\n" +
+            "设为 true 时，巡查陷阱会在同一趟中为拾取后的陷阱补饵。设为 false 时，只为本来就空着的陷阱布饵。HUD 陷阱面板中巡查按钮旁的「布饵」勾选框也会修改此项。");
         var sounds = new Dictionary<SoundGroup, ConfigEntry<string>>
         {
             [SoundGroup.LiveCaptureCage] = BindSound("LiveCaptureCage", "the Live Capture Cage", "「活捉笼」"),
@@ -51,6 +54,7 @@ public sealed class Plugin : BasePlugin
             new WebPage(log.Write),
             new PresetFileOnDisk(Path.Combine(Paths.ConfigPath, PresetFileName), log.Write),
             (group, mode) => sounds[group].Value = Sounds.ModeName(mode),
+            isOn => rebaitOnCheck.Value = isOn,
             log.Write);
 
         OptionalLive.Watch(isLoggingToFile, isOn => log.IsFileOn = isOn);
@@ -66,6 +70,12 @@ public sealed class Plugin : BasePlugin
             session.UseControls(panelKey.Value, panelKeyShift.Value, checkKey.Value);
             log.Write($"window key {(panelKeyShift.Value ? "Shift+" : "")}{panelKey.Value}, check key {checkKey.Value}");
         }, panelKey, panelKeyShift, checkKey);
+
+        OptionalLive.Watch(() =>
+        {
+            session.UseRebaitOnCheck(rebaitOnCheck.Value);
+            log.Write("re-bait on check " + (rebaitOnCheck.Value ? "on" : "off"));
+        }, rebaitOnCheck);
 
         OptionalLive.Watch(() =>
         {

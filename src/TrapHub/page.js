@@ -82,7 +82,8 @@
     keyWindowNote: 'Change the keys in the mod config: PanelKey, PanelKeyShift and CheckKey.', keyOff: 'Off', footWindow: 'this window',
     keyNone: 'No key is set; use the trap button on the left of the screen.',
     presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', escClose: 'Esc to close',
-    tip: 'Your traps: catches, bait and wear'
+    tip: 'Your traps: catches, bait and wear',
+    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, this floor first', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0}, {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0}, {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.'
   };
 
   var state = {
@@ -1699,6 +1700,7 @@
       }
 
       placeHudButton(doc);
+      patchTrapPanel(doc);
     }
   }
 
@@ -1803,8 +1805,420 @@
     return tip;
   }
 
+  // ---------- the game's own trap panel ----------
+
+  // The HUD's trap panel (CoreUI1.html, above the objectives): a toggle row that opens a list of every trap. Trap Hub
+  // adds a Check traps button with its plan as the hover tip and a Re-bait box to the row, built like the game's
+  // Tend Garden button and Replant box on the plants row above it; a line on top of the list with what the next check
+  // does; and a second line under each trap with its bait, catch and wear. Vue owns that markup and redraws it when
+  // it likes, so the additions are checked on every page poll and put back; none of them changes Vue's own nodes.
+  var PANEL_STYLE_ID = 'th-panel-style';
+  var GAME_ARMED_EN = 'deploying defenses';
+  var JAWS_PATH = 'M1.5 11.2L4 9.8 6 12 8 10.4 10 12 12 9.8 14.5 11.2V12.6L8 14.2 1.5 12.6Z';
+  var ARROW_PATH = 'M8 1.6V7.6M5.2 4.6L8 1.6 10.8 4.6';
+  var PANEL_CSS = [
+    '.trap-panel .trap-popover{max-width:340px}',
+    '.trap-panel .trap-item-row{flex-wrap:wrap}',
+    '.th-check-btn{margin-left:4px;position:relative}',
+    '.trap-toggle-row.is-expanded .th-check-btn .entry-tip{display:none}',
+    '.th-sub{flex-basis:100%;display:flex;align-items:center;gap:5px;padding-left:20px;font-size:9.5px;color:rgba(255,255,255,0.55);white-space:nowrap;text-shadow:1px 1px 2px black}',
+    '.th-sub img,.th-strip img{width:11px;height:11px;object-fit:contain}',
+    '.th-sub .th-sep{color:rgba(255,255,255,0.25)}',
+    '.th-gold{color:#ffd54f}',
+    '.th-red{color:#ef9a9a;font-weight:bold}',
+    '.th-orange{color:#ffb74d}',
+    '.th-sub .th-right{margin-left:auto;display:inline-flex;align-items:center;gap:4px}',
+    '.th-wear{display:inline-block;width:26px;height:3px;border-radius:2px;background:rgba(255,255,255,0.15);overflow:hidden}',
+    '.th-wear i{display:block;height:100%;background:#9ccc65}',
+    '.th-wear.th-low i{background:#e57373}',
+    '.th-strip{display:flex;align-items:center;gap:5px;padding:2px 4px 3px;font-size:9.5px;color:rgba(255,255,255,0.75);white-space:nowrap;text-shadow:1px 1px 2px black}',
+    '.th-strip b{color:#ffd54f}',
+    '.th-lnk{margin-left:auto;color:#ffd54f;border:1px solid rgba(255,193,7,0.45);border-radius:8px;padding:0 7px;cursor:pointer}',
+    '.th-lnk:hover{background:rgba(255,193,7,0.16)}',
+    '.entry-tip.th-plan{width:300px;max-width:330px;white-space:normal;left:-16px;transform:none;z-index:30}',
+    '.th-plan-list{margin:5px 0 2px;display:grid;grid-template-columns:14px 1fr auto;gap:2px 6px;align-items:center;font-size:11px;color:#ddd}',
+    '.th-plan-list img{width:13px;height:13px;object-fit:contain}',
+    '.th-plan-list .th-n{color:#ffd54f;font-family:Consolas,monospace;text-align:right}',
+    '.th-plan-room{color:#999}',
+    '.th-plan-h{font-size:10px;color:rgba(255,193,7,0.85);letter-spacing:1px;margin-top:6px}',
+    '.th-plan-foot{margin-top:5px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.12);font-size:10.5px;color:#cfd3d5}',
+    '.th-plan-foot b{color:#ffd54f}',
+    '.th-plan-foot.th-warn{color:#ffb74d}'
+  ].join('\n');
+
+  var hudData = { ready: false };
+  var hudById = {};
+  var hudSeq = 0;
+  var hasReportedVue = false;
+  var hasReportedPanel = false;
+
+  // What the plugin sends every couple of seconds for the panel (HudView): each trap's bait, catch and wear, and the
+  // Check traps plan.
+  function hud(data) {
+    hudData = data && data.ready ? data : { ready: false };
+    hudById = {};
+    (hudData.traps || []).forEach(function (t) { hudById[t.id] = t; });
+    hudSeq++;
+    patchPagesSafely();
+  }
+
+  // The HUD page's Vue state, which holds the trap rows' ids in the order the rows are drawn. Null if a game update
+  // moved it, and then the rows get no second line; the button and the plan still work.
+  function vueState(doc) {
+    try {
+      var app = doc.getElementById('app');
+      var setup = app && app._vnode && app._vnode.component && app._vnode.component.setupState;
+
+      return (setup && setup.state) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function patchTrapPanel(doc) {
+    var row = doc.querySelector('.trap-toggle-row');
+
+    if (!row || !state.isLive || !hudData.ready) {
+      doc.querySelectorAll('.th-add').forEach(function (node) { node.remove(); });
+
+      return;
+    }
+
+    var vue = vueState(doc);
+
+    if (!vue && !hasReportedVue) send('diag|the HUD trap panel has no Vue state to read, so its rows get no second line');
+    hasReportedVue = hasReportedVue || !vue;
+
+    // The game's English for a baited trap waiting for prey reads as a battle term; Chinese and other words are left as they are.
+    if (vue && String(vue.i18n_trapStatusArmed || '').trim().toLowerCase() === GAME_ARMED_EN) vue.i18n_trapStatusArmed = say('stArmed');
+
+    addPanelStyle(doc);
+    placeCheckControls(doc, row);
+
+    var list = doc.querySelector('.trap-popover');
+
+    if (list) {
+      placeStrip(doc, list);
+      placeRowLines(doc, list, vue);
+    }
+
+    if (!hasReportedPanel) send('diag|Check traps added to the HUD trap panel');
+    hasReportedPanel = true;
+  }
+
+  // The button and box sit before the chevron, as the game's Tend Garden and Replant do on the plants row; they are
+  // built once and only their tip and tick change, so a tip being read does not flicker away.
+  function placeCheckControls(doc, row) {
+    var button = row.querySelector('.th-check-btn');
+    var box = row.querySelector('.th-rebait-chk');
+
+    if (!button || !box) {
+      if (button) button.remove();
+      if (box) box.remove();
+
+      button = checkButton(doc);
+      box = rebaitBox(doc);
+
+      var chevron = row.querySelector('.trap-toggle-chevron');
+
+      row.insertBefore(button, chevron);
+      row.insertBefore(box, chevron);
+    }
+
+    if (button.getAttribute('data-version') !== String(hudSeq)) {
+      var old = button.querySelector('.entry-tip');
+
+      if (old) old.remove();
+
+      button.appendChild(checkTip(doc));
+      button.setAttribute('data-version', String(hudSeq));
+    }
+
+    box.querySelector('input').checked = !!hudData.rebait;
+  }
+
+  function checkButton(doc) {
+    var node = doc.createElement('span');
+    var svg = doc.createElementNS(SVG_NS, 'svg');
+    var jaws = doc.createElementNS(SVG_NS, 'path');
+    var arrow = doc.createElementNS(SVG_NS, 'path');
+
+    node.className = 'mature-patrol-btn has-entry-tip th-check-btn th-add';
+    node.setAttribute('data-interactive', '');
+    svg.setAttribute('viewBox', '0 0 16 16');
+    svg.setAttribute('fill', 'currentColor');
+    jaws.setAttribute('d', JAWS_PATH);
+    arrow.setAttribute('d', ARROW_PATH);
+    arrow.setAttribute('stroke', 'currentColor');
+    arrow.setAttribute('stroke-width', '1.7');
+    arrow.setAttribute('stroke-linecap', 'round');
+    arrow.setAttribute('fill', 'none');
+    svg.appendChild(jaws);
+    svg.appendChild(arrow);
+    node.appendChild(svg);
+    node.addEventListener('click', function (e) {
+      e.stopPropagation();
+      sendAction('checkall');
+    });
+
+    return node;
+  }
+
+  function rebaitBox(doc) {
+    var label = doc.createElement('label');
+    var input = doc.createElement('input');
+    var words = doc.createElement('span');
+
+    label.className = 'mature-replant-chk th-rebait-chk th-add';
+    label.setAttribute('data-interactive', '');
+    input.type = 'checkbox';
+    words.textContent = say('rebait');
+    label.appendChild(input);
+    label.appendChild(words);
+    // The click must not reach the toggle row, which would open or close the list.
+    label.addEventListener('click', function (e) { e.stopPropagation(); });
+    input.addEventListener('change', function () {
+      hudData.rebait = !!input.checked;
+      send('checkrebait|' + (input.checked ? '1' : '0'));
+    });
+
+    return label;
+  }
+
+  // The plan, from the same choices the press makes: what it collects and where, what it baits with, the refills when
+  // Re-bait is on, how far it walks, and what it leaves.
+  function checkTip(doc) {
+    var tip = doc.createElement('div');
+    var title = doc.createElement('div');
+    var d = hudData;
+
+    tip.className = 'entry-tip tip-below th-plan';
+    title.className = 'entry-tip-title';
+    title.textContent = say('keyCheck');
+
+    if (d.key) title.appendChild(make(doc, 'span', 'entry-tip-key', d.key));
+
+    tip.appendChild(title);
+
+    var lines = (d.take || []).map(function (t) {
+      var prey = t.prey > 0 ? preyOf(t.prey) : { name: say('hStored') };
+
+      return planLine(doc, prey, say('hCollect', prey.name), t.room, t.n);
+    })
+      .concat((d.bait || []).map(function (b) { return planLine(doc, baitOf(b.bait), say('hBaitWith', baitOf(b.bait).name), b.room, b.n); }));
+
+    if (lines.length) tip.appendChild(planList(doc, lines));
+
+    if (d.rebait && (d.refill || []).length) {
+      tip.appendChild(make(doc, 'div', 'th-plan-h', say('hRebaitOn')));
+      tip.appendChild(planList(doc, d.refill.map(function (r) { return planLine(doc, baitOf(r.bait), say('hRefill'), baitOf(r.bait).name, r.n); })));
+    }
+
+    if (d.touched > 0) {
+      tip.appendChild(fillFoot(doc, make(doc, 'div', 'th-plan-foot', ''), d.touched, d.floors));
+    } else {
+      tip.appendChild(make(doc, 'div', 'th-plan-foot', say('hIdle')));
+    }
+
+    (d.skips || []).forEach(function (s) {
+      tip.appendChild(make(doc, 'div', 'th-plan-foot th-warn', say(s.why === 'breaks' ? 'hSkipBreaks' : 'hSkipNoBait', typeOf(s.type).name, s.room)));
+    });
+
+    if (d.skipMore > 0) tip.appendChild(make(doc, 'div', 'th-plan-foot th-warn', say('hSkipMore', d.skipMore)));
+
+    return tip;
+  }
+
+  // "5 traps on 4 floors, this floor first" with both numbers bold, whichever order the language puts them in.
+  function fillFoot(doc, foot, touched, floors) {
+    foot.textContent = '';
+
+    say('hFoot').split(/(\{[01]\})/).forEach(function (part) {
+      if (part === '{0}') foot.appendChild(make(doc, 'b', '', String(touched)));
+      else if (part === '{1}') foot.appendChild(make(doc, 'b', '', String(floors)));
+      else if (part) foot.appendChild(doc.createTextNode(part));
+    });
+
+    return foot;
+  }
+
+  function planList(doc, lines) {
+    var list = make(doc, 'div', 'th-plan-list', '');
+
+    lines.forEach(function (cells) { cells.forEach(function (cell) { list.appendChild(cell); }); });
+
+    return list;
+  }
+
+  // One grid line: icon, words with the room greyed, count.
+  function planLine(doc, item, words, room, count) {
+    var middle = make(doc, 'span', '', words);
+
+    if (room) middle.appendChild(make(doc, 'span', 'th-plan-room', ' \u00b7 ' + room));
+
+    return [hudIcon(doc, item), middle, make(doc, 'span', 'th-n', String(count))];
+  }
+
+  // "Next check: 3 prey, 2 to bait, 1 about to break", and the way into the Trap Hub window.
+  function placeStrip(doc, list) {
+    var strip = list.querySelector('.th-strip');
+
+    if (strip && strip.parentNode === list && strip.getAttribute('data-version') === String(hudSeq)) return;
+    if (strip) strip.remove();
+
+    var d = hudData;
+    var link = make(doc, 'span', 'th-lnk', 'Trap Hub \u2197');
+
+    strip = make(doc, 'div', 'th-strip th-add', say('hNextCheck'));
+    strip.setAttribute('data-version', String(hudSeq));
+    strip.appendChild(countPart(doc, 'hPrey', d.preyCount || 0, ''));
+    strip.appendChild(make(doc, 'span', 'th-sep', '\u00b7'));
+    strip.appendChild(countPart(doc, 'hToBait', d.baitCount || 0, ''));
+
+    if (d.worn > 0) {
+      strip.appendChild(make(doc, 'span', 'th-sep', '\u00b7'));
+      strip.appendChild(countPart(doc, 'hWorn', d.worn, 'th-red'));
+    }
+
+    link.setAttribute('data-interactive', '');
+    link.addEventListener('click', function (e) {
+      e.stopPropagation();
+      send('toggle');
+    });
+    strip.appendChild(link);
+    list.insertBefore(strip, list.firstChild);
+  }
+
+  function countPart(doc, key, count, className) {
+    var parts = say(key).split('{0}');
+    var node = make(doc, 'span', className, parts[0]);
+
+    node.appendChild(make(doc, 'b', '', String(count)));
+    node.appendChild(doc.createTextNode(parts.slice(1).join('{0}')));
+
+    return node;
+  }
+
+  // Rows are drawn in the order of the Vue state's trap list, so row i is that list's trap i.
+  function placeRowLines(doc, list, vue) {
+    var traps = (vue && vue.traps) || [];
+    var rows = list.querySelectorAll('.trap-item-row');
+
+    for (var i = 0; i < rows.length; i++) {
+      var trap = traps[i];
+      var data = trap ? hudById[String(trap.trapInstanceId)] : null;
+      var key = data ? data.id + '|' + hudSeq : '';
+      var sub = null;
+
+      for (var c = 0; c < rows[i].children.length; c++) {
+        if (rows[i].children[c].classList.contains('th-sub')) sub = rows[i].children[c];
+      }
+
+      if (sub && sub.getAttribute('data-key') === key) continue;
+      if (sub) sub.remove();
+      if (!data) continue;
+
+      sub = rowLine(doc, data);
+      sub.setAttribute('data-key', key);
+      rows[i].appendChild(sub);
+    }
+  }
+
+  // Bait (or what it gets next), catch, and catches left with a wear bar.
+  function rowLine(doc, t) {
+    var sub = make(doc, 'span', 'th-sub th-add', '');
+    var hasNext = Object.prototype.hasOwnProperty.call(t, 'next');
+    // A trap still holding its catch is not empty: its next bait goes after the catch, as a refill.
+    var refill = t.prey > 0 && hasNext && t.next > 0 ? t.next : 0;
+
+    if (t.halted) {
+      sub.appendChild(make(doc, 'span', 'th-orange', say('hFull')));
+    } else if (t.catches === 0) {
+      sub.appendChild(make(doc, 'span', 'th-red', say('hWornOut')));
+    } else if (t.bait > 0) {
+      sub.appendChild(hudIcon(doc, baitOf(t.bait)));
+      sub.appendChild(make(doc, 'span', '', baitOf(t.bait).name));
+    } else if (refill) {
+      // Shown after the catch below.
+    } else if (hasNext && t.next > 0) {
+      sub.appendChild(make(doc, 'span', 'th-orange', say('hEmpty')));
+      sub.appendChild(hudIcon(doc, baitOf(t.next)));
+      sub.appendChild(make(doc, 'span', 'th-gold', baitOf(t.next).name));
+    } else if (hasNext) {
+      sub.appendChild(make(doc, 'span', 'th-orange', say('hNoBait')));
+    }
+
+    if (t.prey > 0 || t.store > 0) {
+      if (sub.children.length) sub.appendChild(make(doc, 'span', 'th-sep', '\u00b7'));
+
+      if (t.prey > 0) {
+        sub.appendChild(hudIcon(doc, preyOf(t.prey)));
+        sub.appendChild(make(doc, 'span', 'th-gold', preyOf(t.prey).name));
+      } else {
+        sub.appendChild(make(doc, 'span', 'th-gold', say('hStored') + ' \u00d7' + t.store));
+      }
+    }
+
+    if (refill) {
+      sub.appendChild(make(doc, 'span', 'th-sep', '\u00b7'));
+      sub.appendChild(make(doc, 'span', '', say('hRefillWith')));
+      sub.appendChild(hudIcon(doc, baitOf(refill)));
+      sub.appendChild(make(doc, 'span', 'th-gold', baitOf(refill).name));
+    }
+
+    if (t.catches != null) {
+      var right = make(doc, 'span', 'th-right', '');
+      var low = t.catches <= 1;
+      var bar = make(doc, 'span', 'th-wear' + (low ? ' th-low' : ''), '');
+      var fill = doc.createElement('i');
+
+      fill.style.width = Math.max(0, Math.min(100, Math.round(t.catches / Math.max(1, t.total) * 100))) + '%';
+      bar.appendChild(fill);
+      right.appendChild(bar);
+      right.appendChild(make(doc, 'span', low ? 'th-red' : '', say('hLeft', t.catches)));
+      sub.appendChild(right);
+    }
+
+    return sub;
+  }
+
+  // An item's picture, or nothing when the game has none. Icon paths are relative to the root document's folder and
+  // the HUD page sits in a folder of its own, so they are made absolute first.
+  function hudIcon(doc, item) {
+    var img = doc.createElement('img');
+
+    if (item && item.icon) img.src = rootUrl(item.icon);
+    else img.style.visibility = 'hidden';
+
+    return img;
+  }
+
+  function rootUrl(path) {
+    if (/^([a-z]+:|\/)/i.test(path)) return path;
+
+    return String(location.href || '').replace(/[^\/]*([?#].*)?$/, '') + path;
+  }
+
+  function addPanelStyle(doc) {
+    if (doc.getElementById(PANEL_STYLE_ID)) return;
+
+    var style = doc.createElement('style');
+    style.id = PANEL_STYLE_ID;
+    style.textContent = PANEL_CSS;
+    (doc.head || doc.body).appendChild(style);
+  }
+
+  function make(doc, tag, className, words) {
+    var node = doc.createElement(tag);
+
+    if (className) node.className = className;
+    if (words) node.textContent = words;
+
+    return node;
+  }
+
   setInterval(patchPagesSafely, 400);
 
-  window.__sltraphub = { open: open, setData: setData, close: close, status: status, live: live, catalog: catalog, badge: badge };
+  window.__sltraphub = { open: open, setData: setData, close: close, status: status, live: live, catalog: catalog, badge: badge, hud: hud };
   send('ready');
 })();

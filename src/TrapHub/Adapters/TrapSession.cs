@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using GameCore.HotUpdate.ReduxUI;
 using TrapHub.Core;
 using UnityEngine;
 
@@ -14,7 +15,8 @@ namespace TrapHub.Adapters;
 internal sealed class TrapSession
 {
     private const float OpenRefreshSeconds = 1f;
-    private const float ClosedRefreshSeconds = 5f;
+    // Short enough that the HUD trap panel's rows and Check traps tip are close to what a press would do.
+    private const float ClosedRefreshSeconds = 2f;
     private const float AutoSeconds = 5f;
 
     private readonly ITrapGame _game;
@@ -22,6 +24,7 @@ internal sealed class TrapSession
     private readonly WebKeyboard _keyboard = new();
     private readonly PresetFileOnDisk _file;
     private readonly Action<SoundGroup, SoundMode> _saveSound;
+    private readonly Action<bool> _saveRebait;
     private readonly Action<string> _log;
     private readonly Dictionary<long, float> _retryAt = new();
 
@@ -31,22 +34,26 @@ internal sealed class TrapSession
     private KeyCode _checkKey;
     private IReadOnlyDictionary<SoundGroup, SoundMode> _sounds = new Dictionary<SoundGroup, SoundMode>();
     private bool _isSoundsElsewhere;
+    private bool _isRebaitOnCheck = true;
+    private bool _hasReportedPopFailure;
 
     private bool _isOpen;
     private string _shownView = "";
     private TrapCatalog? _sentCatalog;
     private int? _sentBadge;
+    private string _sentHud = "";
     private bool? _sentLive;
     private float _nextRefreshAt;
     private float _nextAutoAt;
     private TrapWorld? _lastWorld;
 
-    public TrapSession(ITrapGame game, WebPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<string> log)
+    public TrapSession(ITrapGame game, WebPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
     {
         _game = game;
         _page = page;
         _file = file;
         _saveSound = saveSound;
+        _saveRebait = saveRebait;
         _log = log;
     }
 
@@ -74,6 +81,14 @@ internal sealed class TrapSession
         _shownView = "";
     }
 
+    /// <summary>Whether Check traps also baits the traps it empties (RebaitOnCheck).</summary>
+    public void UseRebaitOnCheck(bool isOn)
+    {
+        _isRebaitOnCheck = isOn;
+        _sentHud = "";
+        _nextRefreshAt = 0f;
+    }
+
     public void Update()
     {
         var now = Time.unscaledTime;
@@ -95,7 +110,7 @@ internal sealed class TrapSession
 
         if (!_keyboard.IsClaimed && _checkKey != KeyCode.None && !isShiftHeld && Input.GetKeyDown(_checkKey))
         {
-            Press("check traps (key)", () => TrapRun.CheckAll(_game, Book(), null));
+            Check("check traps (key)", null);
 
             return;
         }
@@ -141,6 +156,7 @@ internal sealed class TrapSession
                 _sentLive = null;
                 _sentBadge = null;
                 _sentCatalog = null;
+                _sentHud = "";
                 _shownView = "";
                 _nextRefreshAt = 0f;
                 break;
@@ -161,7 +177,13 @@ internal sealed class TrapSession
                 Press("take this floor", () => TrapRun.TakeAll(_game, _lastWorld?.PlayerFloor));
                 break;
             case PageCommand.CheckAll check:
-                Press(check.IsThisFloor ? "check this floor" : "check traps", () => TrapRun.CheckAll(_game, Book(), check.IsThisFloor ? _lastWorld?.PlayerFloor : null));
+                Check(check.IsThisFloor ? "check this floor" : "check traps", check.IsThisFloor ? _lastWorld?.PlayerFloor : null);
+                break;
+            case PageCommand.RebaitOnCheck rebait:
+                // Without Exiled's Toolkit a changed setting is not applied again on its own, so it is used here too.
+                _saveRebait(rebait.IsOn);
+                UseRebaitOnCheck(rebait.IsOn);
+                _log("re-bait on check " + (rebait.IsOn ? "on" : "off"));
                 break;
             case PageCommand.RebaitAll:
                 Press("re-bait all", () => TrapRun.RebaitAll(_game, Book()));
@@ -264,6 +286,10 @@ internal sealed class TrapSession
         SendLive(world != null);
         SendBadge(world == null ? 0 : TrapView.NeedsYou(world));
 
+        if (world != null) SendCatalog(world.Catalog);
+
+        SendHud(world == null ? HudView.NotReady() : HudView.Ready(world, Book(), _game.FloorCost, _isRebaitOnCheck, CheckKeyName));
+
         if (_isOpen) Show(read, isOpening: false);
     }
 
@@ -273,6 +299,13 @@ internal sealed class TrapSession
         if (_page.Live(isLive, PanelKeyName)) _sentLive = isLive;
 
         _log($"HUD button {(isLive ? "shown" : "hidden")}");
+    }
+
+    /// <summary>The HUD trap panel's rows and Check traps plan, sent only when they changed.</summary>
+    private void SendHud(string hudJson)
+    {
+        if (hudJson == _sentHud) return;
+        if (_page.Hud(hudJson)) _sentHud = hudJson;
     }
 
     private void SendBadge(int count)
@@ -382,15 +415,44 @@ internal sealed class TrapSession
         Redraw();
     }
 
-    /// <summary>Runs one press and shows what it did, then redraws so a queued badge or new count shows at once.</summary>
-    private void Press(string name, Func<TrapOutcome> press)
+    /// <summary>
+    /// Check traps from any of its buttons or its key. Like the game's Tend Garden, a check that lined something up
+    /// shows the game's own popup ("Check x5"), at the press rather than after the walk.
+    /// </summary>
+    private void Check(string name, int? onlyFloor)
+    {
+        var outcome = Press(name, () => TrapRun.CheckAll(_game, Book(), onlyFloor, _isRebaitOnCheck));
+        var count = outcome == null ? 0 : TrapMessages.CheckedCount(outcome);
+
+        if (count > 0) Pop(Texts.CheckPop.Say(IsChinese, count));
+    }
+
+    private void Pop(string text)
+    {
+        try
+        {
+            Ac_PopText_AddPopText.SendAction(text);
+        }
+        catch (Exception ex)
+        {
+            if (!_hasReportedPopFailure) _log("could not show the game's popup (reported once): " + ex.Message);
+
+            _hasReportedPopFailure = true;
+        }
+    }
+
+    /// <summary>
+    /// Runs one press and shows what it did, then redraws so a queued badge or new count shows at once, and refreshes
+    /// on the next frame so the HUD panel catches up too. Null when the press threw.
+    /// </summary>
+    private TrapOutcome? Press(string name, Func<TrapOutcome> press)
     {
         string message;
+        TrapOutcome? outcome = null;
 
         try
         {
-            var outcome = press();
-
+            outcome = press();
             message = TrapMessages.Describe(outcome, IsChinese);
             _log($"{name}: {outcome} -> {message}");
         }
@@ -402,5 +464,8 @@ internal sealed class TrapSession
 
         _page.Status(message);
         Redraw();
+        _nextRefreshAt = 0f;
+
+        return outcome;
     }
 }

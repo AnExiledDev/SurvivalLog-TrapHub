@@ -1,5 +1,5 @@
 Name: Trap Hub
-Summary: Every trap at home in one window, grouped by room, and one key (J) that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps your food safe, and each trap shows its wear and catch odds.
+Summary: Every trap at home in one window, grouped by room, and one key (J) or a button in the game's own trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps your food safe, and each trap shows its wear and catch odds.
 
 Description (BBCode):
 Every trap at home in one window: what each one holds, what bait it gets next, how worn it is and what it is likely to catch. Press [font=Courier New]J[/font] to check every trap: collect every catch, then bait every empty trap. Press [font=Courier New]Shift+J[/font], or the trap button in the tool column on the left of the screen, to open the window. The button shows how many traps hold a catch to take or wait for bait.
@@ -9,6 +9,7 @@ Every trap at home in one window: what each one holds, what bait it gets next, h
 [*][b]All traps at a glance[/b]: every trap at home, grouped by room with your floor marked, with its state, its bait, its store and how many catches it has left before it breaks.[/*]
 [*][b]Find a trap fast[/b]: show the traps that need you, the armed ones or all, and search by trap, room or prey. The side panel lists what waits; press a line to see those traps.[/*]
 [*][b]Check all traps[/b] ([font=Courier New]J[/font]): collects every catch, your floor first, nearest trap first, then baits every empty trap from its preset. [b]This floor only[/b] does the same for the floor you are on; [b]Collect only[/b] and [b]Bait only[/b] do one half.[/*]
+[*][b]In the game's own trap list[/b]: the Home Traps list in the HUD gets a Check traps button, whose tip shows what the check will collect, bait and skip, and a Re-bait box that turns refilling emptied traps on or off. Each trap shows its bait, its catch and the catches it has left.[/*]
 [*][b]Bait presets[/b]: an ordered list of baits, so when one runs out the next is used. Each step can keep a number back, and the preset can fall back to any allowed universal bait.[/*]
 [*][b]Per trap or per type[/b]: each trap type has a default preset, and any trap can have its own.[/*]
 [*][b]Where bait comes from[/b]: bag only, or bag first and then home storage, and the food closest to spoiling first.[/*]
@@ -46,7 +47,7 @@ None known.
 Delete [font=Courier New]TrapHub.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder. To also drop your presets, delete [font=Courier New]BepInEx\config\trap-hub.json[/font].
 
 [size=5]Configuration[/size]
-To change the keys or the catch sounds, edit [font=Courier New]BepInEx\config\com.dev.survivallog.traphub.cfg[/font] while the game is closed, or use the Mod Manager's Mods screen (see [url=https://github.com/AnExiledDev/SurvivalLog-TrapHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese). Presets and allowed bait are set in the Trap Hub window.
+To change the keys, the catch sounds or whether Check traps refills emptied traps, edit [font=Courier New]BepInEx\config\com.dev.survivallog.traphub.cfg[/font] while the game is closed, or use the Mod Manager's Mods screen (see [url=https://github.com/AnExiledDev/SurvivalLog-TrapHub/blob/main/CONFIG.md]CONFIG.md[/url] for every setting; the cfg file explains each setting in English and Chinese). Presets and allowed bait are set in the Trap Hub window.
 
 [size=5]Feedback[/size]
 Found a bug or have an idea? Come say hi on the [url=https://discord.gg/trTsyxUFqg]Core Directive Discord[/url], or post in this page's Posts tab. For bugs, please include [font=Courier New]BepInEx\LogOutput.log[/font] and, if you turned on [font=Courier New]LogToFile[/font], [font=Courier New]BepInEx\trap-hub.log[/font].
@@ -66,6 +67,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-TrapHub]g
 [*][b]陷阱一览[/b]：家中所有陷阱按房间分组并标出你所在的楼层，显示状态、诱饵、储存，以及损坏前还能捕获几次。[/*]
 [*][b]快速找到陷阱[/b]：可只看需要你处理的、已布饵的或全部陷阱，并按陷阱、房间或猎物搜索。侧栏列出待办事项，点一下即可查看对应的陷阱。[/*]
 [*][b]巡查所有陷阱[/b]（[font=Courier New]J[/font]）：先收取所有猎物（先当前楼层，再由近及远），再按方案为所有空陷阱放饵。[b]仅本层[/b]只处理你所在的楼层；[b]仅收取[/b]和[b]仅补饵[/b]只做其中一半。[/*]
+[*][b]游戏自带的陷阱列表[/b]：HUD 中的家中陷阱列表新增巡查按钮，悬停可查看这次巡查会拾取、布饵和跳过哪些陷阱；旁边的「布饵」勾选框决定是否为拾取后的陷阱补饵。每个陷阱还会显示诱饵、猎物和剩余可捕获次数。[/*]
 [*][b]诱饵方案[/b]：按顺序排列的诱饵清单，一种用完就换下一种。每一步可以保留一定数量，方案还可以最后改用任意已允许的广谱诱饵。[/*]
 [*][b]按陷阱或按类型[/b]：每种陷阱有默认方案，任何陷阱也可以单独指定方案。[/*]
 [*][b]诱饵来源[/b]：只从背包取，或先背包再家中储物，并优先使用最快变质的食物。[/*]
@@ -83,7 +85,7 @@ Trap Hub 包含 Trapline 的功能，两者请只装一个。安装前如已装�
 
 [size=5]前置要求[/size]
 [list]
-[*]Survival Log 1.1.19131。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 或更新版本。安装后，在 Mod Manager 的模组界面修改的设置无需重启游戏即可生效；未安装时，在下次启动游戏时生效。[/*]
 [/list]

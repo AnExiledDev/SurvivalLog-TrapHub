@@ -53,6 +53,7 @@ public static class Texts
     public static readonly Phrase NothingToTake = new("No catches to collect.", "没有可拾取的猎物。");
     public static readonly Phrase AlreadyTaking = new("No new catches: {0} already queued.", "没有新的猎物：{0} 个已在队列中。");
     public static readonly Phrase NothingToCheck = new("Nothing to check: no catches waiting and every trap that can take bait has some.", "无需巡查：没有待拾取的猎物，所有可布饵的陷阱都已有诱饵。");
+    public static readonly Phrase CheckPop = new("Check x{0}", "巡查 \u00d7{0}");
     public static readonly Phrase Dismantling = new("Dismantling {0}.", "正在拆除{0}。");
     public static readonly Phrase Refused = new("The game would not do that for {0}.", "游戏拒绝了对{0}的操作。");
     public static readonly Phrase Failed = new("Trap Hub failed, see " + Log + ".", "Trap Hub 出错，详见 " + Log + "。");
@@ -212,5 +213,25 @@ public static class Texts
         ("presetFile", new("Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.", "预设和允许的诱饵保存在 BepInEx/config/trap-hub.json，所有存档共用。")),
         ("escClose", new("Esc to close", "Esc 关闭")),
         ("tip", new("Your traps: catches, bait and wear", "你的陷阱：猎物、诱饵和耐久")),
+        ("hEmpty", new("empty, will use", "空，将使用")),
+        ("hNoBait", new("empty, no bait left", "空，没有可用诱饵")),
+        ("hWornOut", new("worn out, repair or replace", "已损坏，请修理或更换")),
+        ("hFull", new("full, collect to restart", "已满，拾取后继续")),
+        ("hLeft", new("{0} left", "剩 {0} 次")),
+        ("hStored", new("Stored catch", "储物")),
+        ("hNextCheck", new("Next check:", "下次巡查：")),
+        ("hPrey", new("{0} prey", "{0} 个猎物")),
+        ("hToBait", new("{0} to bait", "{0} 个待布饵")),
+        ("hWorn", new("{0} about to break", "{0} 个即将损坏")),
+        ("hCollect", new("Collect {0}", "拾取{0}")),
+        ("hBaitWith", new("Bait with {0}", "用{0}布饵")),
+        ("hRebaitOn", new("RE-BAIT IS ON", "布饵已开启")),
+        ("hRefill", new("Refill traps you empty", "为拾取后的陷阱补饵")),
+        ("hRefillWith", new("refill with", "补饵：")),
+        ("hFoot", new("{0} traps on {1} floors, this floor first", "{1} 个楼层的 {0} 个陷阱，先本层")),
+        ("hIdle", new("Nothing to check: every trap is armed and baited.", "无需巡查：所有陷阱都已布置并有诱饵。")),
+        ("hSkipBreaks", new("{0}, {1} breaks on its next catch, so it is emptied but not re-baited.", "{1}的{0}下次捕获就会损坏，只拾取不补饵。")),
+        ("hSkipNoBait", new("{0}, {1} has no bait left, so it is skipped.", "{1}的{0}没有可用诱饵，将被跳过。")),
+        ("hSkipMore", new("{0} more skipped.", "另有 {0} 个被跳过。")),
     };
 }

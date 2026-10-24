@@ -254,6 +254,49 @@ function openHud() {
   return frame;
 }
 
+// The HUD's trap panel, opened: the toggle row with its chevron, the list with one row per trap id, and the Vue state
+// the rows are drawn from, as CoreUI1.html builds them.
+function openTrapPanel(ids, armedWords) {
+  var doc = hudPage();
+  var app = new FakeElement('div');
+  var trapPanel = new FakeElement('div');
+  var row = new FakeElement('div');
+  var chevron = new FakeElement('svg');
+  var list = new FakeElement('div');
+
+  app.id = 'app';
+  app._vnode = { component: { setupState: { state: { traps: ids.map(function (id) { return { trapInstanceId: id }; }), i18n_trapStatusArmed: armedWords } } } };
+  trapPanel.className = 'trap-panel';
+  row.className = 'trap-toggle-row is-expanded';
+  row.setAttribute('data-interactive', '');
+  chevron.className = 'trap-toggle-chevron';
+  list.className = 'trap-popover';
+  row.appendChild(new FakeElement('svg'));
+  row.appendChild(chevron);
+  ids.forEach(function () {
+    var item = new FakeElement('div');
+
+    item.className = 'trap-item-row';
+    item.appendChild(new FakeElement('span'));
+    list.appendChild(item);
+  });
+  trapPanel.appendChild(row);
+  trapPanel.appendChild(list);
+  app.appendChild(trapPanel);
+  doc.body.appendChild(app);
+
+  return trapPanel;
+}
+
+function vueState() {
+  return hudPage().getElementById('app')._vnode.component.setupState.state;
+}
+
+// The second line the page added under trap row i.
+function trapLine(i) {
+  return hudPage().querySelectorAll('.trap-item-row')[i].querySelector('.th-sub');
+}
+
 function hudPage() {
   return document.querySelector('iframe').contentDocument;
 }

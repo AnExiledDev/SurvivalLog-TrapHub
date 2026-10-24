@@ -77,14 +77,15 @@ public static class TrapView
     /// The bait Re-bait All would put in each empty trap right now, in the same order and from the same shared stock,
     /// so two traps never both show the last portion of something.
     /// </summary>
-    public static IReadOnlyDictionary<long, BaitChoice?> NextBait(TrapWorld world, PresetBook book)
+    /// <param name="isWanted">Which baitable traps to count, every one when null.</param>
+    public static IReadOnlyDictionary<long, BaitChoice?> NextBait(TrapWorld world, PresetBook book, Func<Trap, bool>? isWanted = null)
     {
         var reserved = new Dictionary<long, int>();
         var next = new Dictionary<long, BaitChoice?>();
 
         foreach (var trap in TrapRun.FloorFirst(world))
         {
-            if (!world.Catalog.Types.TryGetValue(trap.TypeId, out var type) || !BaitPick.CanBait(trap, type)) continue;
+            if (!world.Catalog.Types.TryGetValue(trap.TypeId, out var type) || !BaitPick.CanBait(trap, type) || (isWanted != null && !isWanted(trap))) continue;
 
             var preset = book.PresetFor(world.SaveKey, trap);
 

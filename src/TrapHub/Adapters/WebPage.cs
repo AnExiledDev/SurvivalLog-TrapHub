@@ -62,6 +62,9 @@ internal sealed class WebPage
     /// <summary>Names, icons and what each trap takes and catches; the views refer to items by id only.</summary>
     public bool Catalog(string catalogJson) => Call($"catalog({catalogJson})");
 
+    /// <summary>The rows and Check traps plan for the game's own trap panel in the HUD (HudView).</summary>
+    public bool Hud(string hudJson) => Call($"hud({hudJson})");
+
     /// <summary>The count badge on the HUD button, sent whether or not the window is open.</summary>
     public bool Badge(int count) => Call($"badge({count})");
 

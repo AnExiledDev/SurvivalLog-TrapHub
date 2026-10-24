@@ -14,6 +14,9 @@ public class PageCommandTests
         Assert.IsType<PageCommand.Toggle>(Parse("toggle"));
         Assert.IsType<PageCommand.TakeFloor>(Parse("takefloor"));
         Assert.Equal(new PageCommand.CheckAll(false), Parse("checkall"));
+        Assert.Equal(new PageCommand.RebaitOnCheck(true), Parse("checkrebait|1"));
+        Assert.Equal(new PageCommand.RebaitOnCheck(false), Parse("checkrebait|0"));
+        Assert.Null(Parse("checkrebait|yes"));
         Assert.Equal(new PageCommand.CheckAll(true), Parse("checkfloor"));
         Assert.Equal(new PageCommand.Rebait(12), Parse("rebait|12"));
         Assert.Equal(new PageCommand.Dismantle(-5), Parse("dismantle|-5"));

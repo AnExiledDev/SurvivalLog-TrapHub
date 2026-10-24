@@ -9,6 +9,7 @@ Press `J` to check every trap: collect every catch, then bait every empty trap. 
 - **All traps at a glance**: every trap at home, grouped by room with your floor marked, with its state (armed, prey, no bait, halted), its bait, its store and how many catches it has left before it breaks.
 - **Find a trap fast**: show the traps that need you, the armed ones or all, and search by trap, room or prey. The side panel lists what waits (catches to collect, traps to bait, no bait left, about to break, halted); press a line to see those traps.
 - **Check all traps** (`J`): collects every catch, your floor first, nearest trap first, then baits every empty trap from its preset, the ones just emptied included. **This floor only** does the same for the floor you are on; **Collect only** and **Bait only** do one half. Each trap can also be handled on its own.
+- **In the game's own trap list**: the Home Traps list in the HUD gets a Check traps button, whose tip shows what the check will collect, bait and skip, and a Re-bait box that turns refilling emptied traps on or off. Each trap in the list shows its bait, its catch and the catches it has left, and a line on top counts what waits, with a link to the window.
 - **Bait presets**: an ordered list of baits, so when one runs out the next is used. Each step can keep a number back (keep at least 3 meat, say). If every step is out, the preset can fall back to any allowed universal bait.
 - **Per trap or per type**: each trap type has a default preset, and any trap can have its own. A trap's own preset is kept per save.
 - **Where bait comes from**: bag only, or bag first and then home storage, and the food closest to spoiling first.
@@ -42,13 +43,13 @@ Delete `TrapHub.dll` from the `BepInEx\plugins` folder. For a clean slate, also 
 
 ## Configuration
 
-Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the first time the game starts with the mod. The keys are `CheckKey` (J) and `PanelKey` with `PanelKeyShift` (Shift+J). The catch sounds can also be set in the window's Settings tab. See [CONFIG.md](CONFIG.md) for every setting.
+Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the first time the game starts with the mod. The keys are `CheckKey` (J) and `PanelKey` with `PanelKeyShift` (Shift+J). `RebaitOnCheck` sets whether Check traps refills the traps it empties. The catch sounds can also be set in the window's Settings tab. See [CONFIG.md](CONFIG.md) for every setting.
 
 ## Troubleshooting
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.3.0 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
+Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.4.0 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
 
 ## Known issues
 
