@@ -17,7 +17,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.2.0";
+    private const string Version = "0.3.0";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
@@ -26,8 +26,14 @@ public sealed class Plugin : BasePlugin
         if (!OptionalLive.IsToolkitInstalled) Log.LogInfo(OptionalLive.MissingNote);
 
         var panelKey = Config.Bind("General", "PanelKey", KeyCode.J,
-            "Key that opens and closes the Trap Hub window, J by default. None turns the key off; the trap button in the HUD's tool column still opens the window.\n" +
-            "打开和关闭 Trap Hub 窗口的按键，默认 J。设为 None 则停用该按键，HUD 工具栏中的陷阱按钮仍可打开窗口。");
+            "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true (Shift+J by default). None turns the key off; the trap button in the HUD's tool column still opens the window.\n" +
+            "打开和关闭 Trap Hub 窗口的按键；PanelKeyShift 为 true 时需同时按住 Shift（默认 Shift+J）。设为 None 则停用该按键，HUD 工具栏中的陷阱按钮仍可打开窗口。");
+        var panelKeyShift = Config.Bind("General", "PanelKeyShift", true,
+            "When true, the window opens with Shift and PanelKey together, so PanelKey alone is free for Check traps. Set it to false to open the window with PanelKey alone.\n" +
+            "设为 true 时，需同时按住 Shift 和 PanelKey 才会打开窗口，单按 PanelKey 留给巡查陷阱。设为 false 则单按 PanelKey 即可打开窗口。");
+        var checkKey = Config.Bind("General", "CheckKey", KeyCode.J,
+            "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. J by default. None turns it off.\n" +
+            "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认 J。设为 None 则停用。");
         var sounds = new Dictionary<SoundGroup, ConfigEntry<string>>
         {
             [SoundGroup.LiveCaptureCage] = BindSound("LiveCaptureCage", "the Live Capture Cage", "「活捉笼」"),
@@ -57,9 +63,9 @@ public sealed class Plugin : BasePlugin
 
         OptionalLive.Watch(() =>
         {
-            session.UseControls(panelKey.Value);
-            log.Write($"key {panelKey.Value}");
-        }, panelKey);
+            session.UseControls(panelKey.Value, panelKeyShift.Value, checkKey.Value);
+            log.Write($"window key {(panelKeyShift.Value ? "Shift+" : "")}{panelKey.Value}, check key {checkKey.Value}");
+        }, panelKey, panelKeyShift, checkKey);
 
         OptionalLive.Watch(() =>
         {

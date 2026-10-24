@@ -22,6 +22,7 @@ public static class TrapMessages
         TrapOutcome.NothingToTake nothing => nothing.AlreadyQueued > 0 ? Texts.AlreadyTaking.Say(isChinese, nothing.AlreadyQueued) : Texts.NothingToTake.Pick(isChinese),
         TrapOutcome.Dismantling dismantling => Texts.Dismantling.Say(isChinese, dismantling.Trap),
         TrapOutcome.Refused refused => Texts.Refused.Say(isChinese, refused.Trap),
+        TrapOutcome.Checked check => Checked(check, isChinese),
         _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "unknown trap outcome"),
     };
 
@@ -36,6 +37,19 @@ public static class TrapMessages
         if (baited.RefusedCount > 0) parts.Add(Texts.GameRefused.Say(isChinese, baited.RefusedCount));
 
         return string.Join(" ", parts);
+    }
+
+    /// <summary>Only the halves that did something are told, so a check with nothing to collect talks about bait alone.</summary>
+    private static string Checked(TrapOutcome.Checked check, bool isChinese)
+    {
+        var isTakeIdle = check.Take is TrapOutcome.NothingToTake { AlreadyQueued: 0 };
+        var isBaitIdle = check.Bait is TrapOutcome.NothingToBait;
+
+        if (isTakeIdle && isBaitIdle) return Texts.NothingToCheck.Pick(isChinese);
+        if (isTakeIdle) return Describe(check.Bait, isChinese);
+        if (isBaitIdle) return Describe(check.Take, isChinese);
+
+        return Describe(check.Take, isChinese) + " " + Describe(check.Bait, isChinese);
     }
 
     private static string Taking(TrapOutcome.Taking taking, bool isChinese)

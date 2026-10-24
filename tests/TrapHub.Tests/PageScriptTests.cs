@@ -7,11 +7,12 @@ namespace TrapHub.Tests;
 /// <summary>The window and the HUD button as the player uses them, driven through page.js in Jint.</summary>
 public class PageScriptTests
 {
-    private static readonly ViewSettings Settings = new(new Dictionary<SoundGroup, SoundMode>(), SoundsElsewhere: false, "J");
+    private static readonly ViewSettings Settings = new(new Dictionary<SoundGroup, SoundMode>(), SoundsElsewhere: false, "Shift+J", "J");
 
+    // Trap 1 holds a rabbit, 2 is empty on the player's floor, 3 is a net nothing allowed fits, 4 is baited downstairs.
     private static FakeGame Home() => new()
     {
-        Traps = { T(1, prey: Rabbit, state: TrapState.Prey), T(2), T(3, floor: 2, type: Net), T(4, floor: -1, bait: Carrot) },
+        Traps = { T(1, prey: Rabbit, state: TrapState.Prey), T(2), T(3, floor: 2, type: Net, room: Attic), T(4, floor: -1, bait: Carrot) },
         Stock = { Bag(1, Carrot, 5), Bag(2, Meat, 2) },
     };
 
@@ -31,49 +32,83 @@ public class PageScriptTests
 
     private static void ShowTab(PageScript page, string tab) => page.Click($"panelButton('tab','{tab}')");
 
+    private static string ListedTraps(PageScript page) => page.Text("panelButtons('pick').map(function (n) { return n.getAttribute('data-args'); }).join(',')");
+
     [Fact]
-    public void The_traps_are_grouped_by_floor_and_the_players_floor_is_marked()
+    public void The_traps_are_grouped_by_room_and_the_players_floor_is_marked()
     {
         var page = Opened();
 
-        Assert.Equal("Floor -1|Floor 1|Floor 2", page.Text("panel().querySelectorAll('.th-gt').map(function (n) { return n.textContent; }).join('|')"));
-        Assert.Equal("Floor 1", page.Text("panel().querySelectorAll('.th-here').map(function (n) { return n.parentNode.querySelector('.th-gt').textContent; }).join('|')"));
+        Assert.Equal("Pantry|Pantry|Attic", page.Text("panel().querySelectorAll('.th-grp-h').map(function (n) { return n.querySelector('b').textContent; }).join('|')"));
+        Assert.Equal("1", page.Text("panel().querySelectorAll('.th-here').length"));
+        Assert.Contains("Floor 1", page.Text("panel().querySelector('.th-here').parentNode.textContent"));
         Assert.Equal(4, (int)double.Parse(page.Text("panelButtons('pick').length")));
     }
 
     [Fact]
-    public void The_show_filter_narrows_the_list_to_the_traps_asked_for()
+    public void The_show_choice_and_the_search_narrow_the_list()
     {
         var page = Opened();
 
-        page.Click("panelButton('show','prey')");
+        page.Click("panelButton('show','needs')");
 
-        Assert.Equal("1", page.Text("panelButtons('pick').map(function (n) { return n.getAttribute('data-args'); }).join(',')"));
+        Assert.Equal("1,2,3", ListedTraps(page));
+
+        page.Click("panelButton('show','armed')");
+
+        Assert.Equal("4", ListedTraps(page));
 
         page.Click("panelButton('show','all')");
+        page.Type("trapsearch", "attic");
 
-        Assert.Equal(4, (int)double.Parse(page.Text("panelButtons('pick').length")));
+        Assert.Equal("3", ListedTraps(page));
     }
 
     [Fact]
-    public void With_no_trap_picked_a_catch_waiting_is_listed_first_and_opens_its_trap()
+    public void Check_all_traps_names_what_it_will_do_and_sends_one_press()
     {
         var page = Opened();
 
-        Assert.Equal("1", page.Text("panelButtons('goto')[0].getAttribute('data-args')"));
+        // One catch to collect, two empty traps the allowed carrots can fill; the net has nothing allowed to take.
+        Assert.Equal("Check all traps (3)", page.Text("panelButton('checkall').textContent"));
+        Assert.Equal("This floor only (3)", page.Text("panelButton('checkfloor').textContent"));
 
-        page.Click("panelButton('goto','1')");
+        page.Click("panelButton('checkall')");
+        page.Click("panelButton('checkall')");
+        page.Click("panelButton('checkfloor')");
 
-        Assert.True(page.Is("panelButton('take','1')"));
-        Assert.True(page.Is("panelButton('pick','1').className.indexOf('th-sel') >= 0"));
+        Assert.Equal(new PageCommand[] { new PageCommand.CheckAll(false) }, page.Sent);
+
+        page.Status("Collecting from 1 trap.");
+        page.Click("panelButton('checkfloor')");
+
+        Assert.Equal(new PageCommand.CheckAll(true), page.Sent.Last());
+
+        // Upstairs only the net waits, and nothing allowed fits it.
+        var upstairs = Home();
+        upstairs.PlayerFloor = 2;
+
+        Assert.Equal("This floor only (0)", Opened(upstairs).Text("panelButton('checkfloor').textContent"));
     }
 
     [Fact]
-    public void Take_all_asks_once_and_the_buttons_wait_for_the_answer()
+    public void The_needs_list_says_what_waits_and_opens_the_traps_that_need_you()
     {
         var page = Opened();
 
-        page.Click("panelButton('takeall')");
+        Assert.Contains("Rabbit", page.Text("panel().querySelector('.th-todo').textContent"));
+        Assert.Equal(3, (int)double.Parse(page.Text("panel().querySelectorAll('.th-todo').length")));
+
+        page.Click("panel().querySelectorAll('.th-todo')[0]");
+
+        Assert.Equal("1,2,3", ListedTraps(page));
+    }
+
+    [Fact]
+    public void Collect_only_and_bait_only_wait_for_the_answer_between_presses()
+    {
+        var page = Opened();
+
         page.Click("panelButton('takeall')");
         page.Click("panelButton('rebaitall')");
 
@@ -83,6 +118,23 @@ public class PageScriptTests
         page.Click("panelButton('rebaitall')");
 
         Assert.IsType<PageCommand.RebaitAll>(page.Sent.Last());
+    }
+
+    [Fact]
+    public void A_picked_trap_shows_its_detail_and_back_returns_to_the_needs_list()
+    {
+        var page = Opened();
+
+        page.Click("panelButton('pick','1')");
+
+        Assert.True(page.Is("panelButton('take','1')"));
+        Assert.True(page.Is("panelButton('pick','1').className.indexOf('th-sel-on') >= 0"));
+        Assert.False(page.Is("panelButton('checkall')"));
+
+        page.Click("panelButton('back')");
+
+        Assert.True(page.Is("panelButton('checkall')"));
+        Assert.False(page.Is("panelButton('pick','1').className.indexOf('th-sel-on') >= 0"));
     }
 
     [Fact]
@@ -113,18 +165,6 @@ public class PageScriptTests
     }
 
     [Fact]
-    public void Several_checked_traps_take_a_preset_together()
-    {
-        var page = Opened();
-
-        page.Click("panel().querySelectorAll('.th-chk')[0]");
-        page.Click("panel().querySelectorAll('.th-chk')[2]");
-        page.Click("panelButton('assign','p2|2,4')");
-
-        Assert.Equal(new PageCommand.Assign("p2", new long[] { 2, 4 }), page.Sent.Single(), new AssignComparer());
-    }
-
-    [Fact]
     public void In_a_game_never_saved_presets_cannot_be_picked_per_trap()
     {
         var game = Home();
@@ -144,7 +184,7 @@ public class PageScriptTests
     {
         var page = Opened();
 
-        ShowTab(page, "presets");
+        ShowTab(page, "bait");
         page.Click("panelButton('preset','p2')");
         page.Type("name", "Fox | bait");
         page.Blur("name");
@@ -166,7 +206,7 @@ public class PageScriptTests
     {
         var page = Opened();
 
-        ShowTab(page, "presets");
+        ShowTab(page, "bait");
         page.Type("name", "Half typed");
         page.SetData(TrapView.Ready(Home().World, TwoPresets(), Settings));
 
@@ -186,7 +226,7 @@ public class PageScriptTests
         var book = TwoPresets();
         var page = Opened(game, book);
 
-        ShowTab(page, "presets");
+        ShowTab(page, "bait");
         page.Click("panelButton('newpreset')");
         page.Click("panelButton('savepreset')");
 
@@ -201,15 +241,15 @@ public class PageScriptTests
     }
 
     [Fact]
-    public void The_allowed_tab_starts_on_owned_bait_and_allows_one_or_all_shown()
+    public void Allowed_bait_starts_on_owned_bait_and_allows_one_or_all_shown()
     {
         var page = Opened();
 
-        ShowTab(page, "allowed");
+        ShowTab(page, "bait");
 
         Assert.Equal(2, (int)double.Parse(page.Text("panel().querySelectorAll('.th-bait').length")));
 
-        page.Click("panelButton('allow','1|202')");
+        page.Click("panel().querySelectorAll('.th-bait')[1].querySelector('[data-act]')");
         page.Status("");
         page.Click("panelButtons('allow').filter(function (n) { return n.getAttribute('data-shown') === '1'; })[0]");
 
@@ -217,11 +257,15 @@ public class PageScriptTests
     }
 
     [Fact]
-    public void Sounds_are_set_here_unless_quiet_traps_handles_them()
+    public void The_settings_name_both_keys_and_set_sounds_unless_quiet_traps_handles_them()
     {
         var page = Opened();
 
+        page.Live(true, "Shift+J");
         ShowTab(page, "settings");
+
+        Assert.Equal("J|Shift+J", page.Text("panel().querySelectorAll('.th-key').map(function (n) { return n.textContent; }).join('|')"));
+
         page.Click("panelButton('sound','net|Once')");
 
         Assert.Equal(new PageCommand.Sound(SoundGroup.SimpleBirdNet, SoundMode.Once), page.Sent.Single());

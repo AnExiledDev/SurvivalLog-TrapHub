@@ -25,6 +25,8 @@ internal static class InputGate
         Patch(harmony, typeof(WebUILayer), "ValidateRaycast", postfix: nameof(RouteClicksToPanel), done: "clicks go to the panel while it is open", consequence: "clicks on the panel may fall through to the game");
     }
 
+    public static bool IsShiftHeld() => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+
     public static void PanelOpened() => _isPanelOpen = true;
 
     /// <summary>Keeps hotkeys blocked through the next frame so the key that closed the panel (Esc) is not seen by the game too.</summary>

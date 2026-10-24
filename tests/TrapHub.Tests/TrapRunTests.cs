@@ -142,6 +142,49 @@ public class TrapRunTests
     }
 
     [Fact]
+    public void Check_traps_collects_every_catch_then_baits_every_empty_trap_including_the_one_holding_a_catch()
+    {
+        var game = new FakeGame { Traps = { T(1, prey: Rabbit), T(2), T(3, bait: Carrot), T(4, floor: 2) }, Stock = { Bag(1, Carrot, 5) } };
+
+        var outcome = TrapRun.CheckAll(game, CarrotBook(), onlyFloor: null);
+
+        Assert.Equal(new TrapOutcome.Checked(new TrapOutcome.Taking(1, 1, 0), new TrapOutcome.Baited(3, 0, 0)), outcome);
+        Assert.Equal(new[] { 1L }, game.Taken.Select(t => t.TrapId));
+        Assert.Equal(new[] { 1L, 2L, 4L }, game.Baited.Select(b => b.TrapId).OrderBy(id => id));
+        Assert.Equal("Collecting from 1 trap. Baited 3 traps.", TrapMessages.Describe(outcome, isChinese: false));
+    }
+
+    [Fact]
+    public void Check_this_floor_leaves_the_other_floors_alone()
+    {
+        var game = new FakeGame { Traps = { T(1, prey: Rabbit, floor: 2), T(2, floor: 2), T(3, floor: 1) }, Stock = { Bag(1, Carrot, 5) } };
+
+        TrapRun.CheckAll(game, CarrotBook(), onlyFloor: 1);
+
+        Assert.Empty(game.Taken);
+        Assert.Equal(new[] { 3L }, game.Baited.Select(b => b.TrapId));
+    }
+
+    [Fact]
+    public void Check_traps_with_nothing_to_do_says_so_once_and_reports_only_the_half_that_acted()
+    {
+        var idle = new FakeGame { Traps = { T(1, bait: Carrot) }, Stock = { Bag(1, Carrot, 5) } };
+        var baitOnly = new FakeGame { Traps = { T(1) }, Stock = { Bag(1, Carrot, 5) } };
+
+        Assert.Equal(Texts.NothingToCheck.En, TrapMessages.Describe(TrapRun.CheckAll(idle, CarrotBook(), null), isChinese: false));
+        Assert.Equal("Baited 1 trap.", TrapMessages.Describe(TrapRun.CheckAll(baitOnly, CarrotBook(), null), isChinese: false));
+    }
+
+    [Fact]
+    public void Check_traps_does_nothing_without_a_game_ready_for_it()
+    {
+        var game = new FakeGame { Traps = { T(1) }, Stock = { Bag(1, Carrot, 5) }, ReadInstead = new TrapRead.NotReady("away") };
+
+        Assert.Equal(new TrapOutcome.NotReady("away"), TrapRun.CheckAll(game, CarrotBook(), null));
+        Assert.Empty(game.Baited);
+    }
+
+    [Fact]
     public void Dismantle_reports_what_the_game_did()
     {
         var game = new FakeGame { Traps = { T(1), T(2) }, Refusing = { 2 } };

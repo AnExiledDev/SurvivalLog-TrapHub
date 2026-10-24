@@ -27,6 +27,8 @@ internal sealed class TrapSession
 
     private PresetBook? _book;
     private KeyCode _panelKey;
+    private bool _isPanelShifted;
+    private KeyCode _checkKey;
     private IReadOnlyDictionary<SoundGroup, SoundMode> _sounds = new Dictionary<SoundGroup, SoundMode>();
     private bool _isSoundsElsewhere;
 
@@ -51,11 +53,19 @@ internal sealed class TrapSession
     private static bool IsChinese => GameLanguage.IsChinese();
 
     /// <summary>Called on the main thread at start and after each settings change; the page hears the key at the next refresh.</summary>
-    public void UseControls(KeyCode panelKey)
+    public void UseControls(KeyCode panelKey, bool isPanelShifted, KeyCode checkKey)
     {
         _panelKey = panelKey;
+        _isPanelShifted = isPanelShifted;
+        _checkKey = checkKey;
         _sentLive = null;
+        _shownView = "";
     }
+
+    /// <summary>How the page names the window's key, "Shift+J" when Shift is part of it; empty when there is none.</summary>
+    private string PanelKeyName => _panelKey == KeyCode.None ? "" : (_isPanelShifted ? "Shift+" : "") + _panelKey;
+
+    private string CheckKeyName => _checkKey == KeyCode.None ? "" : _checkKey.ToString();
 
     public void UseSounds(IReadOnlyDictionary<SoundGroup, SoundMode> sounds, bool isSoundsElsewhere)
     {
@@ -73,9 +83,19 @@ internal sealed class TrapSession
 
         while (PageMessages.TryTake(out var command)) HandleSafely(command);
 
-        if (!_keyboard.IsClaimed && _panelKey != KeyCode.None && Input.GetKeyDown(_panelKey))
+        // The window's key wins when both keys are the same and Shift is not part of the window's key.
+        var isShiftHeld = InputGate.IsShiftHeld();
+
+        if (!_keyboard.IsClaimed && _panelKey != KeyCode.None && isShiftHeld == _isPanelShifted && Input.GetKeyDown(_panelKey))
         {
             Toggle();
+
+            return;
+        }
+
+        if (!_keyboard.IsClaimed && _checkKey != KeyCode.None && !isShiftHeld && Input.GetKeyDown(_checkKey))
+        {
+            Press("check traps (key)", () => TrapRun.CheckAll(_game, Book(), null));
 
             return;
         }
@@ -139,6 +159,9 @@ internal sealed class TrapSession
                 break;
             case PageCommand.TakeFloor:
                 Press("take this floor", () => TrapRun.TakeAll(_game, _lastWorld?.PlayerFloor));
+                break;
+            case PageCommand.CheckAll check:
+                Press(check.IsThisFloor ? "check this floor" : "check traps", () => TrapRun.CheckAll(_game, Book(), check.IsThisFloor ? _lastWorld?.PlayerFloor : null));
                 break;
             case PageCommand.RebaitAll:
                 Press("re-bait all", () => TrapRun.RebaitAll(_game, Book()));
@@ -247,7 +270,7 @@ internal sealed class TrapSession
     private void SendLive(bool isLive)
     {
         if (isLive == _sentLive) return;
-        if (_page.Live(isLive, _panelKey == KeyCode.None ? "" : _panelKey.ToString())) _sentLive = isLive;
+        if (_page.Live(isLive, PanelKeyName)) _sentLive = isLive;
 
         _log($"HUD button {(isLive ? "shown" : "hidden")}");
     }
@@ -300,7 +323,7 @@ internal sealed class TrapSession
     /// <summary>The catalog goes first, once per game and language, since the view names items only by id.</summary>
     private void Show(TrapRead read, bool isOpening)
     {
-        var settings = new ViewSettings(_sounds, _isSoundsElsewhere, _panelKey == KeyCode.None ? "" : _panelKey.ToString());
+        var settings = new ViewSettings(_sounds, _isSoundsElsewhere, PanelKeyName, CheckKeyName);
         string view;
 
         switch (read)

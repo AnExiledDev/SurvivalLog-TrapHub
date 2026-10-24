@@ -33,6 +33,9 @@ public abstract record PageCommand
 
     public sealed record RebaitAll : PageCommand;
 
+    /// <summary>Collect every catch, then bait every empty trap; on the player's floor only when IsThisFloor.</summary>
+    public sealed record CheckAll(bool IsThisFloor) : PageCommand;
+
     public sealed record Rebait(long TrapId) : PageCommand;
 
     public sealed record Take(long TrapId) : PageCommand;
@@ -75,6 +78,8 @@ public abstract record PageCommand
             ("takeall", 1) => new TakeAll(),
             ("takefloor", 1) => new TakeFloor(),
             ("rebaitall", 1) => new RebaitAll(),
+            ("checkall", 1) => new CheckAll(false),
+            ("checkfloor", 1) => new CheckAll(true),
             ("rebait", 2) when TryId(parts[1], out var id) => new Rebait(id),
             ("take", 2) when TryId(parts[1], out var id) => new Take(id),
             ("dismantle", 2) when TryId(parts[1], out var id) => new Dismantle(id),

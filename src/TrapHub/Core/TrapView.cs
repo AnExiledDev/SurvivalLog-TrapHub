@@ -9,7 +9,7 @@ using System.Text.Json;
 namespace TrapHub.Core;
 
 /// <summary>The settings the window shows next to the traps: catch sounds, whether Quiet Traps owns them, and the panel key.</summary>
-public sealed record ViewSettings(IReadOnlyDictionary<SoundGroup, SoundMode> Sounds, bool SoundsElsewhere, string Key);
+public sealed record ViewSettings(IReadOnlyDictionary<SoundGroup, SoundMode> Sounds, bool SoundsElsewhere, string Key, string CheckKey = "");
 
 /// <summary>
 /// The JSON the window draws: a count of what needs the player, every trap with its catch chance and the bait a
@@ -199,6 +199,7 @@ public static class TrapView
         json.WriteEndObject();
         json.WriteBoolean("soundsElsewhere", settings.SoundsElsewhere);
         json.WriteString("key", settings.Key);
+        json.WriteString("checkKey", settings.CheckKey);
     }
 
     private static IEnumerable<(int ItemId, int Count)> Owned(IEnumerable<BaitUnit> stock) =>

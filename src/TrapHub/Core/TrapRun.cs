@@ -41,6 +41,9 @@ public abstract record TrapOutcome
     public sealed record Dismantling(string Trap) : TrapOutcome;
 
     public sealed record Refused(string Trap) : TrapOutcome;
+
+    /// <summary>Check traps: the catches lined up for collection, then the empty traps baited.</summary>
+    public sealed record Checked(TrapOutcome Take, TrapOutcome Bait) : TrapOutcome;
 }
 
 /// <summary>The presses: re-bait, take and dismantle, each read fresh from the game and each failing soft through the port.</summary>
@@ -99,6 +102,22 @@ public static class TrapRun
 
         return new TrapOutcome.Taking(taken.Count, taken.Select(trap => trap.Floor).Distinct().Count(), route.Count - taken.Count);
     });
+
+    /// <summary>
+    /// Check traps, like the game's Tend Garden for the garden: every catch lined up for collection, then every empty
+    /// trap baited from its preset. A trap still holding its catch takes bait too, so it is armed again once emptied.
+    /// </summary>
+    /// <param name="onlyFloor">Null for every floor.</param>
+    public static TrapOutcome CheckAll(ITrapGame game, PresetBook book, int? onlyFloor)
+    {
+        var take = TakeAll(game, onlyFloor);
+
+        if (take is TrapOutcome.NoGame or TrapOutcome.NotReady) return take;
+
+        var bait = WithWorld(game, world => RebaitWhere(game, book, world, trap => onlyFloor == null || trap.Floor == onlyFloor));
+
+        return new TrapOutcome.Checked(take, bait);
+    }
 
     public static TrapOutcome Take(ITrapGame game, long trapId) => WithTrap(game, trapId, (world, trap, type) =>
     {

@@ -12,22 +12,19 @@
   var HUD_STYLE_ID = 'th-hud-style';
   var BUSY_TIMEOUT_MS = 5000;
   var TOAST_MS = 3500;
-  var MAX_CARDS = 240;
+  var MAX_ROWS = 240;
   var MAX_ADD = 30;
   var MAX_KEEP = 99;
-  var MAX_NEEDS = 30;
-  var MAX_STOCK = 30;
+  var MAX_NAMES = 3;
+  var TOP_ODDS = 3;
   var SVG_NS = 'http://www.w3.org/2000/svg';
   // A cage: a top bar, three bars and a floor, on the 24-unit grid the game's HUD icons use.
   var CAGE_PATH = 'M3 3h18v3H3V3zm2 4h2v10H5V7zm5 0h2v10h-2V7zm5 0h2v10h-2V7zm4 0h2v10h-2V7zM3 18h18v3H3v-3z';
-  var TABS = ['traps', 'presets', 'allowed', 'settings'];
-  var TAB_WORD = { traps: 'tabTraps', presets: 'tabPresets', allowed: 'tabAllowed', settings: 'tabSettings' };
+  var TABS = ['traps', 'bait', 'settings'];
+  var TAB_WORD = { traps: 'tabTraps', bait: 'tabBait', settings: 'tabSettings' };
   var STATE_WORD = { armed: 'stArmed', prey: 'stPrey', nobait: 'stNoBait', halted: 'stHalted' };
-  var STATE_TAG = { armed: 'th-b-blue', prey: 'th-b-green', nobait: 'th-b-red', halted: 'th-b-dim' };
-  var STATE_ORDER = ['prey', 'nobait', 'halted', 'armed'];
-  var SHOWS = [['all', 'fAll'], ['prey', 'fPrey'], ['nobait', 'fNoBait'], ['worn', 'fBreaks'], ['halted', 'stHalted']];
-  var GROUPS = [['floor', 'gFloor'], ['room', 'gRoom'], ['type', 'gType'], ['state', 'gState']];
-  var BAIT_SHOWS = [['all', 'fAll'], ['owned', 'fOwned'], ['allowed', 'fAllowed'], ['blocked', 'fBlocked'], ['inpreset', 'fInPreset']];
+  var SHOWS = [['needs', 'needsYou'], ['armed', 'stArmed'], ['all', 'fAll']];
+  var BAIT_SHOWS = [['owned', 'fOwned'], ['allowed', 'fAllowed'], ['blocked', 'fBlocked'], ['inpreset', 'fInPreset'], ['all', 'fAll']];
   var KINDS = ['universal', 'preference', 'specialized', 'balanced', 'other'];
   var KIND_WORD = { universal: 'kUniversal', preference: 'kPreference', specialized: 'kSpecialized', balanced: 'kBalanced', other: 'kOther' };
   var SOUNDS = [['cage', 'sCage'], ['net', 'sNet'], ['other', 'sOther']];
@@ -35,15 +32,12 @@
   var AUTOS = [['off', 'autoOff'], ['nearby', 'autoNearby'], ['always', 'autoAlways']];
   // Presses the page answers itself; everything else goes to the plugin.
   var LOCAL = {
-    tab: pickTab, pick: pickTrap, 'goto': gotoTrap, check: checkTrap, clearchecks: clearChecks,
+    tab: pickTab, pick: pickTrap, 'goto': gotoTrap, back: function () { pickTrap(state.sel); },
     show: function (v) { state.show = v; render(); },
-    ftype: function (v) { state.ftype = state.ftype === +v ? 0 : +v; render(); },
-    froom: function (v) { state.froom = state.froom === v ? '' : v; render(); },
-    group: function (v) { state.group = v; render(); },
-    bait: pickBait, baitgo: function (v) { state.tab = 'allowed'; state.baitSel = +v; render(); },
+    bait: pickBait, baitback: function () { pickBait(state.baitSel); },
     filter: function (v) { state.baitShow = v; render(); },
     kind: function (v) { state.kind = state.kind === v ? '' : v; render(); },
-    preset: pickPreset, presetgo: function (v) { state.tab = 'presets'; pickPreset(v); }, newpreset: newPreset,
+    preset: pickPreset, presetgo: function (v) { state.tab = 'bait'; pickPreset(v); }, newpreset: newPreset,
     stepup: function (i) { moveStep(+i, -1); }, stepdown: function (i) { moveStep(+i, 1); }, stepdel: removeStep,
     keepless: function (i) { changeKeep(+i, -1); }, keepmore: function (i) { changeKeep(+i, 1); }, stepadd: addStep,
     lastresort: function () { editDraft(function (d) { d.lastResort = !d.lastResort; }); },
@@ -56,46 +50,48 @@
   var CONFIRMED = { dismantle: true, deletepreset: true };
   // The plugin hands over the words in the game's language before every call (Texts.cs); English stands in until then.
   var ENGLISH = {
-    tabTraps: 'Traps', tabPresets: 'Bait presets', tabAllowed: 'Allowed bait', tabSettings: 'Settings', nTrap: '1 trap', nTraps: '{0} traps',
-    cPrey: '{0} with prey', cNoBait: '{0} without bait', cWorn: '{0} about to break', cHalted: '{0} halted', takeAll: 'Take all ({0})',
-    takeFloor: 'Take this floor ({0})', rebaitAll: 'Re-bait all ({0})', floor: 'Floor {0}', here: 'You are here', stArmed: 'Armed', stPrey: 'Prey',
-    stNoBait: 'No bait', stHalted: 'Halted', caught: 'Caught: {0}', next: 'Re-bait uses: {0}', nextNone: 'No allowed bait left for its preset',
-    catches: '{0} catches left', breaks: 'Breaks on its next catch', store: 'Store: {0}', queued: 'Walk queued', take: 'Take', rebait: 'Re-bait',
-    dismantle: 'Dismantle', confirm: 'Sure?', preset: 'Bait preset', typeDefault: 'Type default ({0})', useDefault: 'Type default',
-    ownPick: 'Picked for it', none: 'None', empty: 'No traps placed at home yet.', noMatch: 'No traps match these filters.', keepN: 'keep {0}',
-    notTaken: 'This trap does not take it', oddsNow: 'Catch odds now', otherPrey: 'Other prey', nothing: 'Nothing', wear: 'Wear', needsYou: 'Needs you',
-    allFine: 'All your traps are armed and baited.', pickTrap: 'Pick a trap to see its bait and catch odds.', show: 'Show', fAll: 'All',
-    fPrey: 'With prey', fNoBait: 'Without bait', fBreaks: 'About to break', trapType: 'Trap type', rooms: 'Rooms', groupBy: 'Group by', gFloor: 'Floor',
-    gRoom: 'Room', gType: 'Type', gState: 'State', baitOwn: 'Bait you own', selected: '{0} selected', clear: 'Clear', assignTo: 'Set bait preset:',
-    noSaveYet: 'Save the game once to pick presets per trap.', newPreset: 'New preset', name: 'Name', steps: 'Bait order',
-    stepsNote: 'Trap Hub uses the first one you have more of than you keep.', noSteps: 'No baits yet. Add some below.', keep: 'Keep', own: 'Own {0}',
-    notAllowed: 'Not allowed, skipped', lastResort: 'Then any allowed universal bait', rules: 'Rules', source: 'Take bait from', srcBag: 'Bag only',
-    srcHome: 'Bag, then home storage', spoilFirst: 'Use the food closest to spoiling first', auto: 'Auto re-bait', autoOff: 'Off',
-    autoNearby: 'On my floor', autoAlways: 'Always', autoNote: 'Puts bait in an empty trap by itself, from this preset, without a walk.',
+    tabTraps: 'Traps', tabBait: 'Bait', tabSettings: 'Settings', nTrap: '1 trap', nTraps: '{0} traps', sumNeed: '{0} need you',
+    floor: 'Floor {0}', here: 'You are here', stArmed: 'Armed', stPrey: 'Prey', stNoBait: 'No bait', stHalted: 'Halted', caught: 'Caught: {0}',
+    next: 'Re-bait uses: {0}', nextShort: 'Empty, next: {0}', nextNone: 'No allowed bait left for its preset', catches: '{0} catches left',
+    breaks: 'Breaks on its next catch', store: 'Store: {0}', queued: 'Walk queued', take: 'Take', rebait: 'Re-bait', dismantle: 'Dismantle',
+    confirm: 'Sure?', preset: 'Bait preset', typeDefault: 'Type default ({0})', useDefault: 'Type default', ownPick: 'Picked for it', none: 'None',
+    empty: 'No traps placed at home yet.', noMatch: 'No traps match.', keepN: 'keep {0}', notTaken: 'This trap does not take it',
+    oddsNow: 'Catch odds now', otherPrey: 'Other prey', nothing: 'Nothing', wear: 'Wear', needsYou: 'Needs you', fAll: 'All',
+    allFine: 'All your traps are armed and baited.', fBreaks: 'About to break', findTrap: 'Find a trap, room or prey',
+    checkAll: 'Check all traps ({0})', checkNote: 'Collect {0}, then bait {1} from your bait presets.', checkFloor: 'This floor only ({0})',
+    takeOnly: 'Collect only ({0})', baitOnly: 'Bait only ({0})', tCollect: 'Collect', tBait: 'Bait', tNoBaitLeft: 'No bait left',
+    tNoBaitLeftSub: 'Allow more bait, or add some to its preset', tBreaks: 'Breaks soon', back: 'Back', thisTrap: 'This trap',
+    nextBait: 'Next bait', inTrap: 'In the trap', noSaveYet: 'Save the game once to pick presets per trap.', tabPresets: 'Bait presets',
+    typeUses: 'Each trap type uses', newPreset: 'New preset', name: 'Name', steps: 'Bait order',
+    stepsNote: 'Trap Hub uses the first one you have more of than you keep.', noSteps: 'No baits yet. Add some below.', keep: 'Keep',
+    own: 'Own {0}', notAllowed: 'Not allowed, skipped', lastResort: 'Then any allowed universal bait', rules: 'Rules', source: 'Take bait from',
+    srcBag: 'Bag only', srcHome: 'Bag, then home storage', spoilFirst: 'Use the food closest to spoiling first', auto: 'Auto re-bait',
+    autoOff: 'Off', autoNearby: 'On my floor', autoAlways: 'Always', autoNote: 'Puts bait in an empty trap by itself, from this preset, without a walk.',
     defaultFor: 'Default for', save: 'Save', delete: 'Delete', addBait: 'Add a bait', search: 'Search', usedBy: 'Traps using it',
-    usedNone: 'No trap uses this preset yet.', more: '{0} more. Search to narrow the list.', unsaved: 'Unsaved changes',
+    usedNone: 'No trap uses this preset yet.', more: '{0} more. Search to narrow the list.', unsaved: 'Unsaved changes', tabAllowed: 'Allowed bait',
     allowedNote: 'Trap Hub only puts bait you allow here in your traps. Everything starts blocked.', fOwned: 'I own', fAllowed: 'Allowed',
-    fBlocked: 'Blocked', fInPreset: 'In a preset', kinds: 'Bait kind', kUniversal: 'Universal', kPreference: 'Preference', kSpecialized: 'Specialized',
-    kBalanced: 'Balanced', kOther: 'Other', quick: 'Quick picks', allowPresets: 'Allow everything in my presets',
-    allowUniversal: 'Allow universal bait I own', allowShown: 'Allow all shown', blockShown: 'Block all shown', allowed: 'Allowed', blocked: 'Blocked',
-    allow: 'Allow', block: 'Block', sOwned: 'Owned', sNotOwned: 'Not owned', noBaitMatch: 'No bait matches these filters.',
-    pickBait: 'Pick a bait to see where it is used.', inPresets: 'In your presets', presetStep: '{0}, step {1}', skipped: 'Skipped while blocked',
+    fBlocked: 'Blocked', fInPreset: 'In a preset', kUniversal: 'Universal', kPreference: 'Preference', kSpecialized: 'Specialized',
+    kBalanced: 'Balanced', kOther: 'Other', allowPresets: 'Allow everything in my presets', allowUniversal: 'Allow universal bait I own',
+    allowShown: 'Allow all shown', blockShown: 'Block all shown', allowed: 'Allowed', blocked: 'Blocked', allow: 'Allow', block: 'Block',
+    noBaitMatch: 'No bait matches these filters.', inPresets: 'In your presets', presetStep: '{0}, step {1}', skipped: 'Skipped while blocked',
     notInPresets: 'Not in any preset.', drawsIn: 'Draws in', takenByHead: 'Taken by', sounds: 'Catch sounds',
     soundsNote: 'The sound a trap plays while it holds a catch. Chime once plays it for a few seconds, then goes quiet.', sCage: 'Live Capture Cage',
     sNet: 'Simple Bird Net', sOther: 'Mousetrap, Iron Animal Trap, Auto Trap Cage', mNormal: 'Normal', mOnce: 'Chime once', mMuted: 'Muted',
-    quietTraps: 'Quiet Traps is installed, so it handles catch sounds.', keyOpen: '{0} opens and closes this window.',
+    quietTraps: 'Quiet Traps is installed, so it handles catch sounds.', keys: 'Keys', keyCheck: 'Check traps',
+    keyCheckNote: 'Collects every catch, then baits every empty trap from its bait preset.', keyWindow: 'Open Trap Hub',
+    keyWindowNote: 'Change the keys in the mod config: PanelKey, PanelKeyShift and CheckKey.', keyOff: 'Off', footWindow: 'this window',
     keyNone: 'No key is set; use the trap button on the left of the screen.',
-    presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', hotkey: 'Hotkey', escClose: 'Esc to close',
+    presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', escClose: 'Esc to close',
     tip: 'Your traps: catches, bait and wear'
   };
 
   var state = {
-    data: { ready: false, note: '' }, isOpen: false, isLive: false, key: '', badge: 0, tab: 'traps', sel: '', checks: {},
-    show: 'all', ftype: 0, froom: '', group: 'floor', baitSel: 0, baitShow: 'owned', kind: '', search: '',
-    presetId: '', draft: null, draftOf: '', pendingNewFrom: null, addSearch: '', armed: '', isTyping: false, isStale: false
+    data: { ready: false, note: '' }, isOpen: false, isLive: false, key: '', badge: 0, tab: 'traps', sel: '', show: 'all', trapSearch: '',
+    baitSel: 0, baitShow: 'owned', kind: '', search: '', presetId: '', draft: null, draftOf: '', pendingNewFrom: null, addSearch: '',
+    armed: '', isTyping: false, isStale: false
   };
   var cat = { types: {}, baits: {}, prey: {}, baitList: [], typeList: [] };
-  // Looked up for every card on every refresh, so they are maps built once per view rather than list scans.
+  // Looked up for every row on every refresh, so they are maps built once per view rather than list scans.
   var allowedSet = {};
   var presetUses = {};
   var ui = null;
@@ -115,11 +111,11 @@
     return text;
   }
 
-  // A phrase with its number picked out, as in "3 with prey": the number is bold and coloured, the rest is plain.
-  function sayCount(key, count, colorClass) {
+  // A phrase with its number picked out, as in "3 need you": the number is bold, the rest is plain.
+  function sayCount(key, count) {
     var parts = say(key).split('{0}');
 
-    return put(el('span'), text(parts[0]), el('b', colorClass, String(count)), text(parts.slice(1).join('{0}')));
+    return put(el('span'), text(parts[0]), el('b', '', String(count)), text(parts.slice(1).join('{0}')));
   }
 
   function trapCount(count) {
@@ -206,12 +202,14 @@
     return node;
   }
 
-  // A row of choices where one is on, like the game's tab strips; each sends its value after the given prefix.
+  // A row of choices where one is on, like the game's tab strips; a choice may carry a count, and each sends its
+  // value after the given prefix.
   function segment(choices, current, action, isEnabled, argsPrefix) {
     var seg = el('div', 'th-seg');
 
     choices.forEach(function (c) {
-      seg.appendChild(plainButton('th-sg' + (c[0] === current ? ' th-on' : ''), c[1], action, (argsPrefix || '') + c[0], isEnabled !== false));
+      seg.appendChild(put(plainButton('th-sg' + (c[0] === current ? ' th-on' : ''), c[1], action, (argsPrefix || '') + c[0], isEnabled !== false),
+        c[2] != null ? el('span', 'th-n', String(c[2])) : null));
     });
 
     return seg;
@@ -222,20 +220,23 @@
   }
 
   function tag(content, colorClass) {
-    return el('span', 'th-badge' + (colorClass ? ' ' + colorClass : ''), content);
+    return el('span', 'th-pill' + (colorClass ? ' ' + colorClass : ''), content);
   }
 
   function section(title, right) {
-    return put(el('div', 'th-sect', title), right);
-  }
+    var head = el('div', 'th-sect', title);
 
-  // A sidebar heading: drawn like a section, kept apart so the list's group headings can be told from it.
-  function caption(title) {
-    return el('div', 'th-cap', title);
+    if (right) head.appendChild(right);
+
+    return head;
   }
 
   function setRow(label, note, control) {
     return put(el('div', 'th-setrow'), put(el('div', 'th-lbl'), el('b', '', label), note ? el('small', '', note) : null), control);
+  }
+
+  function kv(grid, key, value) {
+    put(grid, el('span', 'th-k', key), typeof value === 'string' ? el('b', '', value) : value);
   }
 
   function disableAll(scope, action) {
@@ -245,143 +246,124 @@
   }
 
   var CSS = [
-    '#th-root{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);font-family:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;color:#eee;user-select:none;font-size:14px}',
+    '#th-root{--ac:#FFC83A;--tx:#f0e8d8;--t2:#cbbfa8;--t3:#a89a82;--t4:#7a6e5a;--ln:rgba(220,188,120,.20);--ls:rgba(220,188,120,.11);--cf:rgba(70,58,44,.55);--gr:#8cc56a;--rd:#e57373;--or:#ffa726;--glow:0 0 0 1px rgba(255,200,58,.55),0 0 14px rgba(255,200,58,.22);position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);font-family:"Noto Sans SC","Microsoft YaHei","PingFang SC",sans-serif;color:var(--tx);user-select:none;font-size:14px}',
     '#th-root *{box-sizing:border-box}',
     '#th-root button{font:inherit}',
-    '.th-plate{width:min(1600px,96vw);height:min(940px,92vh);display:flex;flex-direction:column;gap:12px;padding:18px 22px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(30,30,33,.95),rgba(18,18,20,.97));box-shadow:0 10px 40px rgba(0,0,0,.6)}',
-    '.th-head{display:flex;align-items:center;gap:14px}',
-    '.th-title{font-size:22px;font-weight:700;letter-spacing:1px;text-shadow:0 2px 6px rgba(0,0,0,.6)}',
-    '.th-sum{flex:1;font-size:14px;color:rgba(238,238,238,.6);display:flex;gap:6px;flex-wrap:wrap;align-items:baseline}',
-    '.th-sum b{font-weight:700;color:#eee}.th-sum .th-dot{color:rgba(238,238,238,.3)}',
-    '.th-cg{color:#aed581!important}.th-cr{color:#ff8a80!important}.th-ca{color:#EBA308!important}.th-cb{color:#90caf9!important}',
-    '.th-tabs{display:flex;gap:4px;border-bottom:1px solid rgba(255,255,255,.14)}',
-    '.th-tab{font-size:15px;color:#b8b8b8;padding:8px 18px 9px;border:1px solid transparent;border-bottom:none;border-radius:7px 7px 0 0;background:none;position:relative;top:1px;display:flex;gap:8px;align-items:center;cursor:pointer}',
-    '.th-tab:hover{color:#fff}.th-tab.th-on{color:#EBA308;background:rgba(10,10,12,.72);border-color:rgba(255,255,255,.14);font-weight:600}',
-    '.th-tab .th-n{font-size:11px;padding:1px 6px;border-radius:7px;background:#D32F2F;color:#fff;font-weight:700}',
-    '.th-tab .th-n.th-nn{background:rgba(255,255,255,.12);color:#ccc;font-weight:600}',
-    '.th-body{flex:1;min-height:0;display:flex;gap:12px}',
-    '.th-well{background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);border-radius:8px;min-height:0;overflow-y:auto}',
-    '.th-well::-webkit-scrollbar{width:6px}.th-well::-webkit-scrollbar-thumb{background:rgba(235,163,8,.35);border-radius:3px}',
-    '.th-col{display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0}',
-    '.th-sect,.th-cap{font-size:12px;color:#EBA308;letter-spacing:2px;text-transform:uppercase;display:flex;align-items:center;gap:10px;padding:12px 12px 6px}',
-    '.th-sect::after,.th-cap::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(235,163,8,.25),transparent)}',
-    '.th-cap{padding:12px 2px 6px}',
-    '.th-sect .th-r{order:2;text-transform:none;letter-spacing:0;color:#888;font-size:12px}',
-    '.th-sect .th-badge{letter-spacing:0;text-transform:none}',
-    '.th-side{width:250px;flex:none;padding:0 10px 12px}',
-    '.th-chips{display:flex;gap:6px;flex-wrap:wrap;padding:2px 2px 4px}',
-    '.th-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:7px;background:rgba(10,10,12,.72);border:1px solid rgba(255,255,255,.14);color:#eee;font-size:13px;cursor:pointer;white-space:nowrap}',
-    '.th-chip.th-ic{padding-left:4px}.th-chip:hover:not(:disabled){border-color:rgba(235,163,8,.6)}.th-chip:disabled{opacity:.4;cursor:default}',
-    '.th-chip.th-on{border-color:#EBA308;color:#EBA308;background:rgba(235,163,8,.12)}',
-    '.th-chip .th-n{color:#EBA308;font-weight:600}.th-chip.th-zero{opacity:.45}',
-    '.th-seg{display:inline-flex;border:1px solid rgba(255,255,255,.14);border-radius:7px;overflow:hidden;flex:none}',
-    '.th-sg{font-size:13px;padding:5px 11px;color:#b8b8b8;background:none;border:none;border-right:1px solid rgba(255,255,255,.08);cursor:pointer;white-space:nowrap}',
-    '.th-sg:last-child{border-right:none}.th-sg:hover:not(:disabled){color:#fff}.th-sg.th-on{background:rgba(235,163,8,.18);color:#EBA308}.th-sg:disabled{opacity:.4;cursor:default}',
-    '.th-side .th-seg{display:flex}.th-side .th-sg{flex:1;padding:5px 4px}',
-    '.th-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}',
-    '.th-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(10,10,12,.72)}',
-    '.th-acts.th-bulk{border-color:rgba(235,163,8,.6);background:rgba(235,163,8,.07)}.th-acts .th-grow{flex:1}',
-    '.th-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 8px 8px}',
-    '.th-card{position:relative;display:flex;gap:12px;align-items:center;padding:10px 10px 10px 12px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid transparent;cursor:pointer;min-height:96px}',
-    '.th-card:hover{background:rgba(255,255,255,.07)}.th-card.th-hot{border-color:rgba(229,57,53,.5)}.th-card.th-ready{border-color:rgba(124,179,66,.5)}',
-    '.th-card.th-sel{border-color:rgba(235,163,8,.8);background:rgba(235,163,8,.08)}',
-    '.th-chk{position:absolute;left:4px;top:4px;width:18px;height:18px;padding:0;border-radius:4px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.6);color:#111;font-size:12px;line-height:16px;font-weight:700;cursor:pointer;opacity:0;z-index:1}',
-    '.th-card:hover .th-chk,.th-checking .th-chk{opacity:1}.th-chk.th-on{opacity:1;background:#EBA308;border-color:#EBA308}',
-    '.th-cmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}',
-    '.th-nm{font-size:15px;font-weight:600;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;white-space:nowrap}',
-    '.th-ln{font-size:13px;color:#b8b8b8;display:flex;gap:8px;align-items:center;white-space:nowrap;overflow:hidden;min-height:18px}',
-    '.th-ln span{overflow:hidden;text-overflow:ellipsis}',
-    '.th-sub{font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.th-card .th-track{width:80px}',
-    '.th-crt{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}',
-    '.th-pct{font-size:20px;font-weight:700;color:#EBA308;font-variant-numeric:tabular-nums;line-height:1}',
-    '.th-badge{flex:none;font-size:11px;padding:2px 7px;border-radius:5px;background:rgba(255,255,255,.1);color:rgba(238,238,238,.85);white-space:nowrap;font-weight:400}',
-    '.th-b-red{background:rgba(229,57,53,.28);color:#ff8a80}.th-b-amber{background:rgba(255,193,7,.22);color:#EBA308}.th-b-green{background:rgba(124,179,66,.24);color:#aed581}',
-    '.th-b-blue{background:rgba(100,181,246,.2);color:#90caf9}.th-b-dim{background:rgba(255,255,255,.06);color:#888}',
-    '.th-track{width:110px;height:8px;border-radius:4px;background:rgba(255,255,255,.1);overflow:hidden;flex:none}',
-    '.th-fill{display:block;height:100%;border-radius:4px;background:#7cb342}.th-fill.th-amber{background:#EBA308}.th-fill.th-red{background:#e53935}.th-fill.th-grey{background:#666}',
-    '.th-detail{width:440px;flex:none;padding:14px;display:flex;flex-direction:column;gap:12px}',
-    '.th-detail .th-sect{padding:0 0 2px}',
-    '.th-dhead{display:flex;gap:12px;align-items:center}.th-dname{flex:1;min-width:0}',
-    '.th-big{font-size:20px;font-weight:700}.th-dim{color:#888;font-size:12px}',
-    '.th-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.th-bar .th-grow{flex:1}',
-    '.th-box{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;background:rgba(255,255,255,.025);display:flex;flex-direction:column;gap:6px}',
-    '.th-box h4{margin:0 0 2px;display:flex;align-items:center;gap:8px;font-size:12px;color:#EBA308;letter-spacing:2px;text-transform:uppercase;font-weight:600}',
-    '.th-box h4 .th-hnum{margin-left:auto;letter-spacing:0;color:#eee;font-size:14px;text-transform:none}',
-    '.th-nrow{display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 8px;border-radius:6px}',
-    '.th-nrow.th-next{background:rgba(124,179,66,.13)}.th-nrow.th-out{opacity:.45}.th-nrow .th-grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.th-nrow.th-link{cursor:pointer}.th-nrow.th-link:hover{background:rgba(255,255,255,.06)}',
-    '.th-ordn{width:16px;text-align:center;color:#888;font-size:12px}',
-    '.th-orow{display:flex;align-items:center;gap:10px;font-size:13px;padding:3px 8px}',
-    '.th-orow .th-grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.th-orow .th-track{width:120px}',
-    '.th-orow .th-num{width:42px;text-align:right}.th-orow.th-nil{color:#888}.th-orow.th-nil .th-num{color:#888}',
-    '.th-ispace{width:22px;flex:none}',
-    '.th-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid transparent;font-size:13px;cursor:pointer}',
-    '.th-row:hover{background:rgba(255,255,255,.07)}.th-row .th-grow{flex:1;min-width:0}',
-    '.th-rows{display:flex;flex-direction:column;gap:6px}.th-rows.th-tight{gap:2px}',
-    '.th-num{font-weight:600;color:#EBA308;font-variant-numeric:tabular-nums}',
-    '.th-red{color:#ff8a80}.th-green{color:#aed581}',
-    '.th-btn{font-size:13px;color:#dde2f0;padding:7px 12px;border-radius:7px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(58,58,60,.9),rgba(38,38,40,.92));cursor:pointer;white-space:nowrap}',
-    '.th-btn:hover:not(:disabled){background:linear-gradient(180deg,rgba(72,66,48,.92),rgba(50,46,32,.95));border-color:rgba(255,193,7,.75)}',
-    '.th-btn.th-hot{border-color:rgba(235,163,8,.75);color:#EBA308}',
-    '.th-btn.th-danger:hover:not(:disabled),.th-btn.th-armed{background:linear-gradient(180deg,rgba(84,44,42,.92),rgba(58,30,28,.95));border-color:rgba(229,57,53,.75);color:#ff8a80}',
-    '.th-btn.th-sm{font-size:12px;padding:4px 9px}.th-btn:disabled{opacity:.4;cursor:default}',
-    '.th-btn.th-x{width:32px;height:32px;padding:0;font-size:18px;line-height:30px;text-align:center}',
-    '.th-btn.th-ok{border-color:rgba(124,179,66,.55);color:#aed581}.th-btn.th-no{border-color:rgba(229,57,53,.45);color:#ff8a80}',
-    '.th-ib{width:20px;height:20px;padding:0;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:#b8b8b8;font-size:11px;line-height:18px;text-align:center;cursor:pointer}',
-    '.th-ib:hover:not(:disabled){border-color:#EBA308;color:#EBA308}.th-ib:disabled{opacity:.2;cursor:default}.th-ib.th-del:hover{border-color:#e53935;color:#ff8a80}',
-    '.th-tog{width:40px;height:22px;padding:0;border-radius:11px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.14);position:relative;flex:none;cursor:pointer}',
-    '.th-tog::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#999;transition:left .15s}',
-    '.th-tog.th-on{background:rgba(235,163,8,.35);border-color:#EBA308}.th-tog.th-on::after{left:21px;background:#EBA308}',
-    '.th-stepper{display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.14);border-radius:7px;overflow:hidden;font-size:13px;flex:none}',
-    '.th-stp{padding:1px 8px;color:#999;background:rgba(255,255,255,.04);border:none;cursor:pointer}.th-stp:hover:not(:disabled){color:#EBA308}.th-stp:disabled{opacity:.3;cursor:default}',
-    '.th-stepper b{padding:1px 6px;color:#EBA308;font-weight:600;min-width:28px;text-align:center}',
-    '.th-setrow{display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:7px;background:rgba(255,255,255,.04)}',
-    '.th-lbl{flex:1;min-width:0}.th-lbl b{display:block;font-size:14px;font-weight:600}.th-lbl small{display:block;font-size:12px;color:#888;margin-top:2px}',
-    '.th-note{font-size:12px;color:#888;padding:4px 12px}',
-    '.th-banner{padding:8px 12px;border-radius:7px;border:1px solid rgba(100,181,246,.6);background:rgba(100,181,246,.1);color:#bbdefb;font-size:13px}',
-    '.th-plist{width:270px;flex:none;display:flex;flex-direction:column;gap:10px}.th-plist .th-well{flex:1}',
-    '.th-pitem{display:flex;align-items:center;gap:8px;padding:10px 12px;margin:6px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid transparent;cursor:pointer}',
-    '.th-pitem:hover{background:rgba(255,255,255,.07)}.th-pitem.th-sel{border-color:rgba(235,163,8,.75);background:rgba(235,163,8,.08)}',
-    '.th-pitem .th-lbl b{font-size:15px}.th-pitem small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.th-icons{display:flex;gap:2px;flex:none}',
-    '.th-editor{flex:1;min-width:0;padding:12px 14px 16px;display:flex;flex-direction:column;gap:8px}',
-    '.th-editor .th-sect{padding:12px 2px 2px}',
-    '.th-inp{font:inherit;font-size:15px;font-weight:600;color:#fff;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.14);border-radius:7px;padding:6px 10px;user-select:text}',
-    '.th-inp:focus{outline:none;border-color:rgba(235,163,8,.75)}.th-inp.th-small{font-size:13px;font-weight:400;padding:6px 10px;width:100%}',
-    '.th-step{display:grid;grid-template-columns:20px 30px minmax(0,1fr) auto;gap:9px;align-items:center;padding:7px 9px;border-radius:7px;background:rgba(255,255,255,.04);border-left:2px solid transparent}',
-    '.th-step.th-short{border-left-color:#e53935}.th-step.th-go{border-left-color:#7cb342}.th-step.th-bad{background:rgba(229,57,53,.06)}',
-    '.th-ord{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:rgba(235,163,8,.18);color:#EBA308;font-weight:700;font-size:11px}',
-    '.th-sinfo{min-width:0;display:flex;flex-direction:column;gap:3px}.th-sinfo b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden}',
-    '.th-sinfo small{display:block;font-size:11px;color:#888;line-height:1.35}',
+    '.th-win{position:relative;width:min(1580px,96vw);height:min(920px,92vh);display:flex;flex-direction:column;padding:22px 26px 14px;border:1px solid rgba(220,188,120,.28);border-radius:4px;background:radial-gradient(ellipse at 15% 0%,rgba(150,100,40,.30),transparent 55%),linear-gradient(180deg,#3a3129 0%,#2b241d 55%,#241e18 100%);box-shadow:0 18px 60px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,220,150,.08)}',
+    '.th-win::before{content:"";position:absolute;left:24px;right:24px;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--ac),transparent);opacity:.75}',
+    '.th-whd{display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--ln)}',
+    '.th-logo{width:46px;height:46px;flex:none;border-radius:4px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffd25a,#e8a91c);color:#2a1f10;box-shadow:0 2px 8px rgba(0,0,0,.4)}',
+    '.th-logo svg{width:28px;height:28px;fill:currentColor}',
+    '.th-ttl{font-size:26px;letter-spacing:6px;text-transform:uppercase;color:#fff;font-weight:700;line-height:1.1;text-shadow:0 2px 6px rgba(0,0,0,.5)}',
+    '.th-ttl small{display:block;font-size:14px;letter-spacing:0;text-transform:none;color:var(--t3);font-weight:400;margin-top:4px;text-shadow:none}.th-ttl small b{color:var(--ac)}',
+    '.th-tabs{margin-left:auto;display:flex;gap:6px}',
+    '.th-tab{position:relative;padding:8px 20px;border:1px solid var(--ln);border-radius:3px;background:rgba(0,0,0,.18);color:var(--t2);font-size:15px;cursor:pointer;white-space:nowrap}',
+    '.th-tab:hover{color:#fff;border-color:rgba(255,200,58,.45)}.th-tab.th-on{color:var(--ac);border-color:var(--ac);background:rgba(255,200,58,.13);box-shadow:var(--glow);font-weight:700}',
+    '.th-tab .th-n{position:absolute;top:-9px;right:-9px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#d84a3a;color:#fff;font-size:12px;font-weight:700;line-height:20px;text-align:center}',
+    '.th-x{width:36px;height:36px;flex:none;padding:0;border:1px solid var(--ln);border-radius:3px;background:rgba(0,0,0,.18);color:var(--t3);font-size:20px;line-height:32px;cursor:pointer}.th-x:hover{color:#fff;border-color:var(--ac)}',
+    '.th-wbody{flex:1;min-height:0;display:flex;gap:18px;padding-top:14px}',
+    '.th-main{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column;gap:10px}',
+    '.th-side{width:430px;flex:none;min-height:0;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--ls);border-radius:3px;background:rgba(0,0,0,.18)}',
+    '.th-c330{width:330px;flex:none;min-height:0;display:flex;flex-direction:column;gap:10px}.th-c330>.th-scroll{flex:1}',
+    '.th-scroll{min-height:0;overflow-y:auto;padding-right:6px}',
+    '.th-scroll::-webkit-scrollbar{width:6px}.th-scroll::-webkit-scrollbar-thumb{background:rgba(255,200,58,.35);border-radius:3px}',
+    '.th-wfoot{display:flex;align-items:center;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid var(--ln);color:var(--t3);font-size:14px}',
+    '.th-status{flex:1;min-width:0;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.th-kbd{display:inline-block;font-family:Consolas,monospace;font-size:13px;color:var(--tx);border:1px solid var(--ln);border-bottom-width:2px;border-radius:3px;padding:0 6px;margin-right:6px;background:rgba(0,0,0,.25)}',
+    '.th-kbd.th-key{font-size:16px;padding:4px 10px;min-width:84px;text-align:center;flex:none}',
+    '.th-sect{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--ac);margin:6px 0 8px}',
+    '.th-sect::before{content:"";width:4px;height:16px;background:var(--ac);flex:none;border-radius:1px}',
+    '.th-sect::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--ln),transparent);order:1}',
+    '.th-sect .th-r{order:2;letter-spacing:0;text-transform:none;font-weight:400;font-size:13px;color:var(--t3)}',
+    '.th-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border:1px solid var(--ln);border-radius:3px;background:linear-gradient(180deg,rgba(92,78,60,.9),rgba(66,55,42,.92));color:var(--tx);font-size:14px;cursor:pointer;white-space:nowrap}',
+    '.th-btn:hover:not(:disabled){border-color:var(--ac);color:#fff}.th-btn:disabled{opacity:.4;cursor:default}',
+    '.th-btn.th-sm{padding:4px 10px;font-size:13px}',
+    '.th-btn.th-gold{background:linear-gradient(180deg,#ffd25a,#e8a91c);border-color:#ffd25a;color:#2a1f10;font-weight:700}.th-btn.th-gold:hover:not(:disabled){color:#000;box-shadow:var(--glow)}',
+    '.th-btn.th-big{width:100%;padding:13px;font-size:18px}',
+    '.th-btn.th-ghost{background:none;border-color:transparent;color:var(--t3);padding-left:0;align-self:flex-start}.th-btn.th-ghost:hover:not(:disabled){color:var(--ac);border-color:transparent}',
+    '.th-btn.th-danger:hover:not(:disabled),.th-btn.th-armed{border-color:var(--rd);color:var(--rd)}',
+    '.th-btn.th-ok{color:var(--gr)}.th-btn.th-no{color:var(--t3)}',
+    '.th-seg{display:inline-flex;border:1px solid var(--ln);border-radius:3px;overflow:hidden;flex:none}',
+    '.th-sg{padding:6px 14px;border:none;border-right:1px solid var(--ls);background:rgba(0,0,0,.18);color:var(--t2);font-size:14px;cursor:pointer;white-space:nowrap}.th-sg:last-child{border-right:none}.th-sg:hover:not(:disabled){color:#fff}.th-sg:disabled{opacity:.4;cursor:default}',
+    '.th-sg.th-on{background:var(--ac);color:#2a1f10;font-weight:700}.th-sg .th-n{margin-left:6px;opacity:.7}',
+    '.th-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}',
+    '.th-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:3px;background:rgba(0,0,0,.2);border:1px solid var(--ln);color:var(--t2);font-size:13px;cursor:pointer;white-space:nowrap}',
+    '.th-chip.th-ic{padding-left:4px}.th-chip:hover:not(:disabled){border-color:rgba(255,200,58,.6);color:#fff}.th-chip:disabled{opacity:.4;cursor:default}',
+    '.th-chip.th-on{border-color:var(--ac);color:var(--ac);background:rgba(255,200,58,.12)}.th-chip .th-n{color:var(--ac);font-weight:600}',
+    '.th-chip.th-add{border-style:dashed;color:var(--t3);background:none}',
+    '.th-inp{font:inherit;font-size:14px;color:#fff;background:rgba(0,0,0,.35);border:1px solid var(--ln);border-radius:3px;padding:6px 10px;user-select:text}',
+    '.th-inp:focus{outline:none;border-color:var(--ac)}.th-inp.th-small{font-size:13px;padding:4px 8px;width:100%}.th-inp.th-name{font-size:17px;font-weight:700;width:320px}',
+    '.th-tog{width:40px;height:22px;padding:0;border-radius:11px;background:rgba(0,0,0,.35);border:1px solid var(--ln);position:relative;flex:none;cursor:pointer}',
+    '.th-tog::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--t4);transition:left .15s}',
+    '.th-tog.th-on{background:rgba(255,200,58,.3);border-color:var(--ac)}.th-tog.th-on::after{left:21px;background:var(--ac)}',
+    '.th-stepper{display:inline-flex;align-items:center;border:1px solid var(--ln);border-radius:3px;overflow:hidden;font-size:13px;flex:none}',
+    '.th-stp{padding:1px 8px;color:var(--t3);background:rgba(0,0,0,.2);border:none;cursor:pointer}.th-stp:hover:not(:disabled){color:var(--ac)}.th-stp:disabled{opacity:.3;cursor:default}',
+    '.th-stepper b{padding:1px 6px;color:var(--ac);font-weight:700;min-width:28px;text-align:center}',
+    '.th-ib{width:20px;height:20px;padding:0;border-radius:3px;border:1px solid var(--ls);background:rgba(0,0,0,.2);color:var(--t3);font-size:11px;line-height:18px;text-align:center;cursor:pointer}',
+    '.th-ib:hover:not(:disabled){border-color:var(--ac);color:var(--ac)}.th-ib:disabled{opacity:.2;cursor:default}.th-ib.th-del:hover{border-color:var(--rd);color:var(--rd)}',
+    '.th-pill{display:inline-block;flex:none;padding:2px 9px;border-radius:10px;font-size:12px;white-space:nowrap;background:rgba(255,255,255,.08);color:var(--t2);font-weight:400}',
+    '.th-p-ready{background:var(--ac);color:#2a1f10;font-weight:700}.th-p-urgent{background:rgba(229,115,115,.22);color:var(--rd)}.th-p-warn{background:rgba(255,167,38,.18);color:var(--or)}',
+    '.th-p-good{background:rgba(140,197,106,.18);color:var(--gr)}.th-p-dim{background:rgba(255,255,255,.05);color:var(--t4)}',
+    '.th-bar{display:inline-block;width:110px;height:6px;border-radius:3px;background:rgba(0,0,0,.4);overflow:hidden;flex:none}.th-bar i{display:block;height:100%;background:var(--gr)}',
+    '.th-bar.th-gold i{background:var(--ac)}.th-bar.th-red i{background:var(--rd)}.th-bar.th-orange i{background:var(--or)}.th-bar.th-grey i{background:var(--t4)}.th-bar.th-wide{width:100%;height:8px}',
+    '.th-tool{display:flex;align-items:center;gap:10px}.th-tool .th-inp{margin-left:auto;width:280px}',
+    '.th-grp{margin-bottom:14px}',
+    '.th-grp-h{display:flex;align-items:center;gap:10px;margin:0 2px 6px;font-size:13px;color:var(--t3)}.th-grp-h b{font-size:14px;letter-spacing:2px;text-transform:uppercase;color:#fff}',
+    '.th-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}',
+    '.th-row{position:relative;display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:3px;background:var(--cf);border:1px solid transparent;cursor:pointer;min-height:70px}',
+    '.th-row:hover{background:rgba(92,76,56,.7)}.th-row.th-sel-on{border-color:var(--ac);box-shadow:var(--glow)}',
+    '.th-row.th-e-gold::before,.th-row.th-e-red::before,.th-row.th-e-or::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;border-radius:2px;background:var(--ac)}',
+    '.th-row.th-e-red::before{background:var(--rd)}.th-row.th-e-or::before{background:var(--or)}',
+    '.th-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}',
+    '.th-nm{font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.th-nm small{font-size:12px;color:var(--t3);margin-left:8px}',
+    '.th-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);white-space:nowrap;overflow:hidden}',
+    '.th-odds{margin-left:auto;display:flex;gap:8px;flex:none}.th-odd{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--t2)}',
+    '.th-end{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}',
+    '.th-wh{font-size:13px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.th-todo{display:flex;align-items:center;gap:12px;padding:9px 12px;border-radius:3px;background:var(--cf);margin-bottom:6px;cursor:pointer}.th-todo:hover{background:rgba(92,76,56,.7)}',
+    '.th-todo .th-t{flex:1;min-width:0;font-size:15px;color:#fff}.th-todo .th-t small{display:block;font-size:12px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.th-cnt{font-size:20px;font-weight:700;color:var(--ac);min-width:32px;text-align:right}.th-cnt.th-red{color:var(--rd)}.th-cnt.th-or{color:var(--or)}.th-cnt.th-dim{color:var(--t4)}',
+    '.th-cta{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--ls)}.th-cap{font-size:13px;color:var(--t3);text-align:center}',
+    '.th-subacts{display:flex;gap:8px}.th-subacts .th-btn{flex:1}',
+    '.th-det-hd{display:flex;align-items:center;gap:14px;margin:4px 0 12px}.th-det-hd .th-nm{font-size:22px;font-weight:700}',
+    '.th-kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 12px;font-size:14px;margin-bottom:12px;align-items:center}.th-kv .th-k{color:var(--t3)}.th-kv b{font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}',
+    '.th-kv .th-chips{margin:0}',
+    '.th-orow{display:grid;grid-template-columns:22px minmax(0,1fr) 130px 44px;gap:8px;align-items:center;font-size:13px;padding:3px 0}.th-orow.th-nil{opacity:.55}',
+    '.th-num{text-align:right;font-variant-numeric:tabular-nums}.th-ispace{width:22px}',
+    '.th-nrow{display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 8px;border-radius:3px}',
+    '.th-nrow.th-next{background:rgba(140,197,106,.13)}.th-nrow.th-out{opacity:.45}.th-nrow.th-link{cursor:pointer}.th-nrow.th-link:hover{background:rgba(255,200,58,.10)}',
+    '.th-ordn{width:16px;text-align:center;color:var(--t4);font-size:12px}',
+    '.th-pcard{padding:10px 12px;border-radius:3px;background:var(--cf);border:1px solid transparent;margin-bottom:6px;cursor:pointer}.th-pcard:hover{background:rgba(92,76,56,.7)}',
+    '.th-pcard.th-on{border-color:var(--ac);box-shadow:var(--glow)}.th-pcard .th-nm{font-size:16px;font-weight:700}',
+    '.th-ics{display:flex;gap:3px;margin-top:6px}',
+    '.th-trow{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 6px;border-bottom:1px solid var(--ls);font-size:13px;cursor:pointer}.th-trow:hover{background:rgba(255,255,255,.03)}',
+    '.th-hint{font-size:12px;color:var(--t3);line-height:1.45;padding:2px}',
+    '.th-edhd{display:flex;align-items:center;gap:10px;margin-bottom:10px}',
+    '.th-fb{display:flex;flex-direction:column;gap:4px;min-width:0;padding:8px;border-radius:3px;background:rgba(0,0,0,.18);border:1px solid var(--ls);margin-bottom:8px}',
+    '.th-it{display:grid;grid-template-columns:18px 30px minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 7px;border-radius:3px;background:var(--cf);border-left:2px solid transparent}',
+    '.th-it.th-short{border-left-color:var(--rd)}.th-it.th-go{border-left-color:var(--gr)}.th-it.th-bad{opacity:.6;border-left-color:var(--rd)}',
+    '.th-o{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,200,58,.18);color:var(--ac);font-weight:700;font-size:11px}.th-go .th-o{background:rgba(140,197,106,.3);color:var(--gr)}',
+    '.th-sinfo{min-width:0}.th-sinfo b{display:flex;gap:6px;align-items:center;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.th-sinfo small{display:block;font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
     '.th-sctl{display:flex;align-items:center;gap:8px}.th-moves{display:flex;gap:3px}',
-    '.th-dash{font-size:13px;color:#b8b8b8;padding:6px;border-radius:7px;border:1px dashed rgba(255,255,255,.18);background:none;text-align:center}',
-    '.th-picker{display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:7px;background:rgba(0,0,0,.35);border:1px solid rgba(235,163,8,.4)}',
-    '.th-prow{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px;border-radius:5px;cursor:pointer}.th-prow:hover{background:rgba(235,163,8,.12)}.th-prow .th-grow{flex:1;min-width:0}',
-    '.th-uses{width:320px;flex:none;padding:0 12px 14px;display:flex;flex-direction:column;gap:6px}',
-    '.th-uses .th-sect{padding:12px 0 6px}',
-    '.th-settings{flex:1;padding:0 16px 16px;display:flex;flex-direction:column;gap:8px}.th-settings .th-sect{padding:14px 0 4px}',
-    '.th-wl{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px;padding:0 8px 8px}',
-    '.th-bait{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid transparent;cursor:pointer;min-width:0}',
-    '.th-bait:hover{background:rgba(255,255,255,.07)}.th-bait.th-sel{border-color:rgba(235,163,8,.8);background:rgba(235,163,8,.08)}',
-    '.th-bait.th-off>.th-icon,.th-bait.th-off .th-binfo{opacity:.55}',
-    '.th-binfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}',
-    '.th-binfo b{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.th-binfo small{font-size:11px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
-    '.th-bait .th-btn{min-width:74px}',
-    '.th-qcol{display:flex;flex-direction:column;gap:6px;padding:2px}.th-qcol .th-btn{text-align:left;white-space:normal}',
-    '.th-stock{display:flex;flex-direction:column;gap:1px}',
-    '.th-srow{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 4px;border-radius:5px;cursor:pointer}.th-srow:hover{background:rgba(255,255,255,.06)}',
-    '.th-srow .th-grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.th-srow.th-out{opacity:.45}.th-srow .th-num{font-size:12px}',
-    '.th-pchips{display:flex;flex-wrap:wrap;gap:6px}',
-    '.th-pchip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 3px;border-radius:7px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);font-size:12px}',
-    '.th-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:6px;background:rgba(255,255,255,.05);overflow:hidden;color:rgba(238,238,238,.7);font-weight:600}',
+    '.th-dash{padding:5px 8px;border:1px dashed var(--ln);border-radius:3px;color:var(--t3);font-size:12px}',
+    '.th-picker{display:flex;flex-direction:column;gap:3px;padding:6px;border-radius:3px;background:rgba(0,0,0,.35);border:1px solid rgba(255,200,58,.4);margin-bottom:8px}',
+    '.th-prow{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px;border-radius:3px;cursor:pointer}.th-prow:hover{background:rgba(255,200,58,.12)}',
+    '.th-bait{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:3px;background:var(--cf);border:1px solid transparent;margin-bottom:4px;cursor:pointer;font-size:13px}',
+    '.th-bait:hover{background:rgba(92,76,56,.7)}.th-bait.th-off .th-grow{color:var(--t3)}.th-bait.th-sel-on{border-color:var(--ac)}',
+    '.th-q2{display:grid;grid-template-columns:1fr 1fr;gap:6px}.th-q2 .th-btn{white-space:normal;text-align:center;font-size:12px;padding:6px 8px}',
+    '.th-pchips{display:flex;gap:6px;flex-wrap:wrap}.th-pchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 8px 2px 2px;border-radius:3px;background:rgba(0,0,0,.2)}',
+    '.th-setrow{display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:3px;background:var(--cf);margin-bottom:6px}',
+    '.th-lbl{flex:1;min-width:0}.th-lbl b{display:block;font-size:14px;font-weight:600;color:#fff}.th-lbl small{display:block;font-size:12px;color:var(--t3);margin-top:2px}',
+    '.th-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,.25);overflow:hidden;color:var(--t2);font-weight:600}',
     '.th-icon img{width:100%;height:100%;object-fit:contain}',
-    '.th-i56{width:56px;height:56px;font-size:20px}.th-i44{width:44px;height:44px;font-size:17px}.th-i40{width:40px;height:40px;font-size:15px}.th-i30{width:30px;height:30px;font-size:12px}.th-i22{width:22px;height:22px;font-size:11px}.th-i18{width:18px;height:18px;font-size:10px;border-radius:4px}',
-    '.th-empty{padding:24px;color:#888;font-size:14px;text-align:center}',
-    '.th-lockmsg{padding:10px 14px;border-radius:7px;border:1px solid rgba(255,193,7,.75);background:rgba(255,193,7,.12);color:#EBA308;font-size:14px}',
-    '.th-foot{display:flex;gap:12px;font-size:13px;color:rgba(238,238,238,.7);align-items:center}.th-status{flex:1}',
-    '.th-kbd{font-size:12px;color:#ccc;border:1px solid #555;border-bottom-width:2px;border-radius:4px;padding:0 6px;margin:0 4px}',
-    '#th-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;max-width:640px;text-align:center;padding:10px 18px;border-radius:8px;border:1px solid rgba(255,193,7,.75);background:linear-gradient(180deg,rgba(30,30,33,.94),rgba(18,18,20,.96));color:#eee;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
+    '.th-i56{width:64px;height:64px;font-size:22px}.th-i44{width:46px;height:46px;font-size:16px}.th-i30{width:30px;height:30px;font-size:12px}.th-i22{width:22px;height:22px;font-size:11px}.th-i18{width:18px;height:18px;font-size:10px}',
+    '.th-none{padding:24px;color:var(--t3);font-size:14px;text-align:center}',
+    '.th-note{font-size:12px;color:var(--t3);padding:4px 2px 8px}',
+    '.th-banner{padding:8px 12px;margin:6px 0;border-radius:3px;border:1px solid rgba(255,167,38,.55);background:rgba(255,167,38,.10);color:#ffcc80;font-size:13px}',
+    '.th-lockmsg{padding:12px 16px;border-radius:3px;border:1px solid rgba(255,200,58,.6);background:rgba(255,200,58,.10);color:var(--ac);font-size:15px}',
+    '.th-grow{flex:1;min-width:0}.th-dim{color:var(--t3);font-size:12px}.th-red{color:var(--rd)}.th-green{color:var(--gr)}.th-or{color:var(--or)}',
+    '#th-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;max-width:640px;text-align:center;padding:10px 18px;border-radius:4px;border:1px solid rgba(255,200,58,.7);background:linear-gradient(180deg,#3a3129,#241e18);color:#f0e8d8;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
   ].join('\n');
 
   function build() {
@@ -390,22 +372,25 @@
     addStyle();
 
     var root = el('div');
-    var plate = el('div', 'th-plate');
-    var head = el('div', 'th-head');
-    var sum = el('div', 'th-sum');
+    var win = el('div', 'th-win');
+    var head = el('div', 'th-whd');
+    var title = el('div', 'th-ttl', 'Trap Hub');
+    var sum = el('small');
     var tabs = el('div', 'th-tabs');
-    var body = el('div', 'th-body');
-    var foot = el('div', 'th-foot');
+    var body = el('div', 'th-wbody');
+    var foot = el('div', 'th-wfoot');
     var status = el('div', 'th-status');
     var keys = el('div');
+    var esc = el('div');
     var toast = el('div');
 
     root.id = 'th-root';
     toast.id = 'th-toast';
-    put(head, el('div', 'th-title', 'Trap Hub'), sum, button('\u00d7', 'close', null, true, 'th-x'));
-    put(foot, status, keys);
-    put(plate, head, tabs, body, foot);
-    root.appendChild(plate);
+    title.appendChild(sum);
+    put(head, put(el('div', 'th-logo'), cage(document)), title, tabs, plainButton('th-x', '\u00d7', 'close', null, true));
+    put(foot, status, keys, esc);
+    put(win, head, body, foot);
+    root.appendChild(win);
     document.body.appendChild(root);
     document.body.appendChild(toast);
 
@@ -414,7 +399,7 @@
     root.addEventListener('focusin', onFocus);
     root.addEventListener('focusout', onBlur);
     root.addEventListener('keydown', onKey);
-    // Clicks inside the plate must not reach the game pages underneath; the mask itself closes nothing on purpose.
+    // Clicks inside the window must not reach the game pages underneath; the mask itself closes nothing on purpose.
     root.addEventListener('mousedown', function (e) { e.stopPropagation(); });
     // A broken icon path swaps to the first-letter placeholder; error events do not bubble, so capture them.
     root.addEventListener('error', function (e) {
@@ -423,7 +408,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sum: sum, tabs: tabs, body: body, status: status, keys: keys, toast: toast };
+    ui = { root: root, sum: sum, tabs: tabs, body: body, status: status, keys: keys, esc: esc, toast: toast };
   }
 
   // The style outlives a lost window root, so a rebuild must not stack another copy of it.
@@ -509,10 +494,13 @@
       markDirty();
     } else if (field === 'search') {
       state.search = e.target.value;
-      fillBaitGrid();
+      fillBaitList();
     } else if (field === 'addsearch') {
       state.addSearch = e.target.value;
       fillAddList();
+    } else if (field === 'trapsearch') {
+      state.trapSearch = e.target.value;
+      fillTrapList();
     }
   }
 
@@ -581,6 +569,31 @@
     return say(KIND_WORD[bait.kind] || 'kOther');
   }
 
+  // Up to a few distinct names, then how many more.
+  function names(list) {
+    var seen = [];
+
+    list.forEach(function (n) {
+      if (n && seen.indexOf(n) < 0) seen.push(n);
+    });
+
+    return seen.slice(0, MAX_NAMES).join(', ') + (seen.length > MAX_NAMES ? ' +' + (seen.length - MAX_NAMES) : '');
+  }
+
+  // What Check traps does to a trap: line up a walk to collect its catch, put bait in it, or both.
+  function isToCollect(trap) { return !!trap.canTake && !trap.queued; }
+
+  function isToBait(trap) { return !!trap.canBait && !!trap.next; }
+
+  // An empty trap needs the player whatever state the game gives it: it catches nothing until it has bait.
+  function needsYou(trap) {
+    return trap.state !== 'armed' || !!trap.worn || !!trap.canBait || !!trap.canTake;
+  }
+
+  function needRank(trap) {
+    return trap.canTake ? 0 : trap.canBait ? 1 : trap.worn ? 2 : trap.state === 'halted' ? 3 : 4;
+  }
+
   // ---------- frame ----------
 
   function render() {
@@ -597,11 +610,11 @@
 
     var scrolls = keepScrolls();
 
-    ui.cards = null;
-    ui.detail = null;
-    ui.baitCards = null;
-    ui.baitDetail = null;
-    ui.grid = null;
+    ui.rows = null;
+    ui.side = null;
+    ui.trapList = null;
+    ui.baitList = null;
+    ui.baitRows = null;
     ui.addList = null;
     renderHead();
     renderTabs();
@@ -609,8 +622,7 @@
 
     if (state.tab === 'settings') renderSettings();
     else if (!state.data.ready) ui.body.appendChild(lockMessage(state.data.note));
-    else if (state.tab === 'presets') renderPresets();
-    else if (state.tab === 'allowed') renderAllowed();
+    else if (state.tab === 'bait') renderBait();
     else renderTraps();
 
     restoreScrolls(scrolls);
@@ -634,42 +646,29 @@
   }
 
   function scroller(key, className) {
-    var node = el('div', 'th-well' + (className ? ' ' + className : ''));
+    var node = el('div', 'th-scroll' + (className ? ' ' + className : ''));
     node.setAttribute('data-scroll', key);
 
     return node;
   }
 
   function lockMessage(content) {
-    var box = el('div', 'th-col');
-    box.style.flex = '1';
+    var box = el('div', 'th-main');
     box.appendChild(el('div', 'th-lockmsg', content || ''));
 
     return box;
   }
 
   function renderHead() {
-    var all = traps();
-    var parts = [];
-
     ui.sum.textContent = '';
 
     if (!state.data.ready) return;
 
-    parts.push(all.length === 1 ? el('span', '', say('nTrap')) : sayCount('nTraps', all.length, ''));
+    var need = traps().filter(needsYou).length;
 
-    // Counted the way the Show filters count, so the header and the sidebar never disagree.
-    [['prey', 'cPrey', 'th-cg'], ['nobait', 'cNoBait', 'th-cr'], ['worn', 'cWorn', 'th-ca'], ['halted', 'cHalted', '']].forEach(function (s) {
-      var count = all.filter(function (t) { return shows(t, s[0]); }).length;
+    ui.sum.appendChild(text(trapCount(traps().length)));
 
-      if (count) parts.push(sayCount(s[1], count, s[2]));
-    });
-
-    parts.forEach(function (part, i) {
-      if (i) ui.sum.appendChild(el('span', 'th-dot', '\u00b7'));
-
-      ui.sum.appendChild(part);
-    });
+    if (need) put(ui.sum, text(' \u00b7 '), sayCount('sumNeed', need));
   }
 
   function renderTabs() {
@@ -679,18 +678,21 @@
       var node = act(el('button', 'th-tab' + (state.tab === tab ? ' th-on' : ''), say(TAB_WORD[tab])), 'tab', tab);
 
       if (tab === 'traps' && state.badge > 0) node.appendChild(el('span', 'th-n', String(state.badge)));
-      if (tab === 'allowed' && state.data.ready) node.appendChild(el('span', 'th-n th-nn', String((state.data.allowed || []).length)));
 
       ui.tabs.appendChild(node);
     });
   }
 
+  // The footer names both keys: Check traps on its own, and the one for this window.
   function renderKeys() {
+    var checkKey = state.data.checkKey || '';
+
     ui.keys.textContent = '';
 
-    if (state.key) put(ui.keys, text(say('hotkey')), el('span', 'th-kbd', state.key), text('/ '));
+    if (checkKey) put(ui.keys, el('span', 'th-kbd', checkKey), text(say('keyCheck')), state.key ? text(' \u00b7 ') : null);
+    if (state.key) put(ui.keys, el('span', 'th-kbd', state.key), text(say('footWindow')));
 
-    ui.keys.appendChild(text(say('escClose')));
+    ui.esc.textContent = say('escClose');
   }
 
   function pickTab(tab) {
@@ -703,27 +705,28 @@
   // ---------- Traps tab ----------
 
   function renderTraps() {
-    var mid = el('div', 'th-mid');
+    var main = el('div', 'th-main');
+    var search = el('input', 'th-inp');
 
-    ui.acts = el('div', 'th-acts');
-    ui.list = trapList();
-    ui.detail = scroller('detail', 'th-detail');
-    fillActs();
-    fillDetail();
-    put(mid, ui.acts, ui.list);
-    put(ui.body, trapSide(), mid, ui.detail);
+    search.setAttribute('data-field', 'trapsearch');
+    search.setAttribute('placeholder', say('findTrap'));
+    search.value = state.trapSearch;
+    ui.trapList = scroller('traps', 'th-grow');
+    ui.side = el('div', 'th-side');
+    put(main, put(el('div', 'th-tool'), segment(SHOWS.map(function (s) {
+      return [s[0], say(s[1]), traps().filter(function (t) { return shows(t, s[0]); }).length];
+    }), state.show, 'show'), search), ui.trapList);
+    fillTrapList();
+    fillSide();
+    put(ui.body, main, ui.side);
   }
 
   function shows(trap, show) {
     switch (show) {
-      case 'prey':
-        return trap.state === 'prey';
-      case 'nobait':
-        return trap.state === 'nobait';
-      case 'worn':
-        return !!trap.worn;
-      case 'halted':
-        return trap.state === 'halted';
+      case 'needs':
+        return needsYou(trap);
+      case 'armed':
+        return !needsYou(trap);
       default:
         return true;
     }
@@ -733,138 +736,47 @@
     return trap.floor + '|' + trap.room;
   }
 
-  function isShown(trap) {
-    return shows(trap, state.show) && (!state.ftype || trap.type === state.ftype) && (!state.froom || roomKey(trap) === state.froom);
+  function matchesSearch(trap) {
+    var query = state.trapSearch.trim().toLowerCase();
+
+    if (!query) return true;
+
+    var words = [typeOf(trap.type).name, trap.room || ''];
+
+    if (trap.prey) words.push(preyOf(trap.prey).name);
+
+    (trap.odds || []).forEach(function (o) { words.push(preyOf(o.prey).name); });
+
+    return words.some(function (w) { return String(w).toLowerCase().indexOf(query) >= 0; });
   }
 
-  // Filters with their counts, the trap types and rooms there are, how the list is grouped, and the bait at hand.
-  function trapSide() {
-    var side = scroller('side', 'th-side');
-    var showChips = el('div', 'th-chips');
-    var typeChips = el('div', 'th-chips');
-    var roomChips = el('div', 'th-chips');
-    var types = [];
-    var rooms = [];
+  // Rooms keep the order the plugin sends (floor, then room), so they read as the house does; inside a room the
+  // traps that need the player come first.
+  function fillTrapList() {
+    var well = ui.trapList;
 
-    SHOWS.forEach(function (s) {
-      var count = traps().filter(function (t) { return shows(t, s[0]); }).length;
-      var node = chip(say(s[1]), 'show', s[0], state.show === s[0], count);
+    if (!well) return;
 
-      if (!count && state.show !== s[0]) setClass(node, 'th-zero', true);
+    var shown = traps().filter(function (t) { return shows(t, state.show) && matchesSearch(t); });
+    var groups = [];
 
-      showChips.appendChild(node);
-    });
+    well.textContent = '';
+    ui.rows = {};
 
-    traps().forEach(function (t) {
-      var type = find(types, function (x) { return x.id === t.type; });
-      var room = find(rooms, function (x) { return x.key === roomKey(t); });
-
-      if (!type) types.push(type = { id: t.type, count: 0 });
-      if (!room) rooms.push(room = { key: roomKey(t), trap: t, count: 0 });
-
-      type.count++;
-      room.count++;
-    });
-    types.forEach(function (x) { typeChips.appendChild(chip(typeOf(x.id).name, 'ftype', x.id, state.ftype === x.id, x.count, typeOf(x.id))); });
-    rooms.forEach(function (x) { roomChips.appendChild(chip(roomTitle(x.trap), 'froom', x.key, state.froom === x.key, x.count)); });
-
-    put(side, caption(say('show')), showChips);
-
-    if (types.length > 1) put(side, caption(say('trapType')), typeChips);
-    if (rooms.length > 1) put(side, caption(say('rooms')), roomChips);
-
-    put(side, caption(say('groupBy')), segment(GROUPS.map(function (g) { return [g[0], say(g[1])]; }), state.group, 'group'),
-      caption(say('baitOwn')), stockList());
-
-    return side;
-  }
-
-  // What the player has to bait with, most first; a blocked one is dimmed, and a press opens it on the Allowed tab.
-  function stockList() {
-    var have = state.data.owned || {};
-    var list = el('div', 'th-stock');
-    var ids = Object.keys(have).map(Number).filter(function (id) { return have[id] > 0 && cat.baits[id]; });
-
-    ids.sort(function (a, b) { return have[b] - have[a] || byName(baitOf(a), baitOf(b)); });
-    ids.slice(0, MAX_STOCK).forEach(function (id) {
-      var bait = baitOf(id);
-
-      list.appendChild(put(act(el('div', 'th-srow' + (isAllowed(id) ? '' : ' th-out')), 'baitgo', id), icon(bait, 'th-i22'), el('span', 'th-grow', bait.name),
-        el('span', 'th-num', String(have[id]))));
-    });
-
-    if (!ids.length) list.appendChild(el('div', 'th-dim', say('none')));
-
-    return list;
-  }
-
-  // The big buttons, or with traps checked, the presets those traps can be given together.
-  function fillActs() {
-    var ids = checkedIds();
-    var c = state.data.counts || {};
-
-    ui.acts.textContent = '';
-    setClass(ui.acts, 'th-bulk', ids.length > 0);
-    setClass(ui.list, 'th-checking', ids.length > 0);
-
-    if (!ids.length) {
-      // The bulk buttons stay pressable with nothing to do: a press then says so.
-      put(ui.acts, button(say('takeAll', c.take || 0), 'takeall', null, true, 'th-hot'), button(say('takeFloor', c.takeFloor || 0), 'takefloor', null, true),
-        button(say('rebaitAll', c.rebait || 0), 'rebaitall', null, true));
+    if (!traps().length) {
+      well.appendChild(el('div', 'th-none', say('empty')));
 
       return;
     }
 
-    var list = ids.join(',');
-
-    put(ui.acts, el('b', '', say('selected', ids.length)), el('span', 'th-dim', say('assignTo')), chip(say('useDefault'), 'assign', '|' + list, false));
-    presets().forEach(function (p) { ui.acts.appendChild(chip(p.name, 'assign', p.id + '|' + list, false)); });
-    put(ui.acts, el('span', 'th-grow'), button(say('clear'), 'clearchecks', null, true, 'th-sm'));
-
-    if (!state.data.saved) {
-      disableAll(ui.acts, 'assign');
-      ui.acts.appendChild(el('span', 'th-dim', say('noSaveYet')));
-    }
-  }
-
-  function checkedIds() {
-    return Object.keys(state.checks).filter(function (id) { return state.checks[id] && trapById(id); });
-  }
-
-  function trapList() {
-    var well = scroller('traps');
-    var shown = traps().filter(isShown);
-
-    ui.cards = {};
-
-    if (!traps().length) {
-      well.appendChild(el('div', 'th-empty', say('empty')));
-
-      return well;
-    }
-
     if (!shown.length) {
-      well.appendChild(el('div', 'th-empty', say('noMatch')));
+      well.appendChild(el('div', 'th-none', state.show === 'needs' && !state.trapSearch.trim() ? say('allFine') : say('noMatch')));
 
-      return well;
+      return;
     }
 
-    groupsOf(shown).forEach(function (group) {
-      var cards = el('div', 'th-cards');
-
-      group.traps.forEach(function (trap) { cards.appendChild(trapCard(trap)); });
-      put(well, groupHead(group), cards);
-    });
-
-    return well;
-  }
-
-  // Floor and room groups keep the order the plugin sends (floor, then room); type and state groups are sorted.
-  function groupsOf(list) {
-    var groups = [];
-
-    list.forEach(function (trap) {
-      var key = groupKey(trap);
+    shown.slice(0, MAX_ROWS).forEach(function (trap) {
+      var key = roomKey(trap);
       var group = find(groups, function (g) { return g.key === key; });
 
       if (!group) groups.push(group = { key: key, first: trap, traps: [] });
@@ -872,74 +784,62 @@
       group.traps.push(trap);
     });
 
-    if (state.group === 'state') groups.sort(function (a, b) { return STATE_ORDER.indexOf(a.key) - STATE_ORDER.indexOf(b.key); });
-    if (state.group === 'type') groups.sort(function (a, b) { return byName(typeOf(a.key), typeOf(b.key)); });
+    groups.forEach(function (group) {
+      var grid = el('div', 'th-grid2');
 
-    return groups;
-  }
+      sorted(group.traps).forEach(function (trap) { grid.appendChild(trapRow(trap)); });
+      well.appendChild(put(el('div', 'th-grp'), groupHead(group), grid));
+    });
 
-  function groupKey(trap) {
-    if (state.group === 'room') return roomKey(trap);
-    if (state.group === 'type') return trap.type;
-    if (state.group === 'state') return trap.state;
-
-    return trap.floor;
-  }
-
-  function groupTitle(trap) {
-    if (state.group === 'room') return roomTitle(trap);
-    if (state.group === 'type') return typeOf(trap.type).name;
-    if (state.group === 'state') return say(STATE_WORD[trap.state] || trap.state);
-
-    return say('floor', trap.floor);
+    if (shown.length > MAX_ROWS) well.appendChild(el('div', 'th-note', say('more', shown.length - MAX_ROWS)));
   }
 
   function groupHead(group) {
-    var head = put(el('div', 'th-sect th-ghead'), el('span', 'th-gt', groupTitle(group.first)));
-    var isPlace = state.group === 'floor' || state.group === 'room';
+    var trap = group.first;
 
-    if (isPlace && group.first.floor === state.data.floor) head.appendChild(tag(say('here'), 'th-b-amber th-here'));
-
-    head.appendChild(el('span', 'th-r', trapCount(group.traps.length)));
-
-    return head;
+    return put(el('div', 'th-grp-h'), el('b', '', trap.room || '?'), el('span', '', say('floor', trap.floor) + ' \u00b7 ' + trapCount(group.traps.length)),
+      trap.floor === state.data.floor ? tag(say('here'), 'th-p-warn th-here') : null);
   }
 
-  function stateTag(trap) {
-    return tag(say(STATE_WORD[trap.state] || trap.state), STATE_TAG[trap.state]);
+  function sorted(list) {
+    var keyed = list.map(function (trap, i) { return { trap: trap, i: i }; });
+
+    keyed.sort(function (a, b) { return needRank(a.trap) - needRank(b.trap) || a.i - b.i; });
+
+    return keyed.map(function (k) { return k.trap; });
   }
 
-  function trapCard(trap) {
+  function edgeClass(trap) {
+    if (trap.state === 'prey') return ' th-e-gold';
+    if (trap.state === 'nobait') return ' th-e-red';
+    if (trap.worn || trap.state === 'halted') return ' th-e-or';
+
+    return '';
+  }
+
+  function statePill(trap) {
+    if (trap.state === 'prey') return tag(trap.prey ? preyOf(trap.prey).name : say('stPrey'), 'th-p-ready');
+    if (trap.state === 'nobait') return tag(say('stNoBait'), 'th-p-urgent');
+    if (trap.state === 'halted') return tag(say('stHalted'), 'th-p-dim');
+
+    return tag(say('stArmed'), 'th-p-good');
+  }
+
+  function trapRow(trap) {
     var type = typeOf(trap.type);
-    var isChecked = !!state.checks[trap.id];
-    var tone = trap.state === 'prey' ? ' th-ready' : trap.state === 'nobait' ? ' th-hot' : '';
-    var card = act(el('div', 'th-card' + (trap.id === state.sel ? ' th-sel' : '') + tone), 'pick', trap.id);
-    var check = act(el('button', 'th-chk' + (isChecked ? ' th-on' : ''), isChecked ? '\u2713' : ''), 'check', trap.id);
-    var name = put(el('div', 'th-nm'), el('span', '', type.name), stateTag(trap), trap.worn ? tag(say('fBreaks'), 'th-b-amber') : null,
-      trap.queued ? tag(say('queued'), 'th-b-green') : null);
-    var preset = presetById(trap.preset);
-    var main = put(el('div', 'th-cmain'), name, baitLine(trap), wearLine(trap), el('div', 'th-sub', (trap.room || '?') + ' \u00b7 ' + (preset ? preset.name : say('none'))));
+    var row = act(el('div', 'th-row' + edgeClass(trap) + (trap.id === state.sel ? ' th-sel-on' : '')), 'pick', trap.id);
+    var name = put(el('div', 'th-nm'), text(type.name), el('small', '', trap.room || '?'));
+    var end = put(el('div', 'th-end'), statePill(trap), trap.worn ? tag(say('fBreaks'), 'th-p-warn') : null, trap.queued ? tag(say('queued'), 'th-p-good') : null);
 
-    put(card, check, icon(type, 'th-i44'), main, cardRight(trap));
-    ui.cards[trap.id] = card;
+    put(row, icon(type, 'th-i44'), put(el('div', 'th-mid'), name, put(baitLine(trap), topOdds(trap)), wearLine(trap)), end);
+    ui.rows[trap.id] = row;
 
-    return card;
-  }
-
-  function cardRight(trap) {
-    var right = el('div', 'th-crt');
-
-    if (trap.prey) right.appendChild(icon(preyOf(trap.prey), 'th-i40'));
-    else if (trap.state === 'armed') right.appendChild(el('div', 'th-pct', trap.chance + '%'));
-
-    if (trap.store) right.appendChild(tag(say('store', trap.store), 'th-b-blue'));
-
-    return right;
+    return row;
   }
 
   // What is in the trap, or what a re-bait would put there.
   function baitLine(trap) {
-    var line = el('div', 'th-ln');
+    var line = el('div', 'th-meta');
 
     if (trap.prey) return put(line, el('span', 'th-green', say('caught', preyOf(trap.prey).name)));
 
@@ -949,28 +849,35 @@
       return put(line, icon(bait, 'th-i18'), el('span', '', bait.name));
     }
 
-    if (trap.state === 'halted') return line;
-    if (!trap.canBait) return put(line, el('span', 'th-red', say('stNoBait')));
+    if (trap.state === 'halted' || !trap.canBait) return line;
     if (!trap.next) return put(line, el('span', 'th-red', say('nextNone')));
 
     var next = baitOf(trap.next);
 
-    return put(line, icon(next, 'th-i18'), el('span', 'th-green', say('next', next.name)));
+    return put(line, icon(next, 'th-i18'), el('span', 'th-or', say('nextShort', next.name)));
+  }
+
+  function topOdds(trap) {
+    var odds = (trap.odds || []).slice(0, TOP_ODDS);
+
+    if (!odds.length || trap.prey) return null;
+
+    var box = el('span', 'th-odds');
+
+    odds.forEach(function (o) { box.appendChild(put(el('span', 'th-odd'), icon(preyOf(o.prey), 'th-i18'), text(o.pct + '%'))); });
+
+    return box;
   }
 
   function wearLine(trap) {
-    var words = trap.dur + ' / ' + trap.max;
+    var words = trap.catches != null ? (trap.worn ? say('breaks') : say('catches', trap.catches)) : trap.dur + ' / ' + trap.max;
 
-    if (trap.catches != null && !trap.worn) words += ' \u00b7 ' + say('catches', trap.catches);
-
-    return put(el('div', 'th-ln'), durabilityBar(trap), el('span', '', words));
+    return put(el('div', 'th-meta'), durabilityBar(trap), el('span', trap.worn ? 'th-or' : 'th-dim', words));
   }
 
-  function durabilityBar(trap, width) {
-    var track = el('span', 'th-track');
-    var fill = el('span', 'th-fill' + (trap.worn ? ' th-red' : trap.dur * 2 < trap.max ? ' th-amber' : ''));
-
-    if (width) track.style.width = width;
+  function durabilityBar(trap, isWide) {
+    var track = el('span', 'th-bar' + (isWide ? ' th-wide' : '') + (trap.worn ? ' th-red' : trap.dur * 2 < trap.max ? ' th-orange' : ''));
+    var fill = el('i');
 
     fill.style.width = percentOf(trap.dur, trap.max) + '%';
     track.appendChild(fill);
@@ -982,76 +889,101 @@
     return whole > 0 ? Math.max(0, Math.min(100, Math.round(part * 100 / whole))) : 0;
   }
 
-  function fillDetail() {
+  // The right side: a picked trap's detail, else what needs the player and the Check traps button.
+  function fillSide() {
+    if (!ui.side) return;
+
     var trap = trapById(state.sel);
 
-    ui.detail.textContent = '';
+    ui.side.textContent = '';
 
-    if (trap) trapDetail(ui.detail, trap);
-    else needsList(ui.detail);
+    if (trap) trapDetail(ui.side, trap);
+    else needsPanel(ui.side);
   }
 
-  function needsYou(trap) {
-    return trap.state !== 'armed' || !!trap.worn;
+  function todo(count, title, sub, icons, countClass) {
+    var ics = icons && icons.length ? el('span', 'th-ics') : null;
+
+    (icons || []).slice(0, MAX_NAMES).forEach(function (item) { ics.appendChild(icon(item, 'th-i22')); });
+
+    return put(act(el('div', 'th-todo'), 'show', 'needs'), el('span', 'th-cnt' + (countClass ? ' ' + countClass : ''), String(count)),
+      put(el('div', 'th-t'), text(title), sub ? el('small', '', sub) : null), ics);
   }
 
-  function needRank(trap) {
-    return trap.state === 'prey' ? 0 : trap.state === 'nobait' ? 1 : trap.worn ? 2 : 3;
+  function needsPanel(side) {
+    var c = state.data.counts || {};
+    var collect = traps().filter(isToCollect);
+    var bait = traps().filter(isToBait);
+    var noBait = traps().filter(function (t) { return t.canBait && !t.next; });
+    var worn = traps().filter(function (t) { return t.worn; });
+    var halted = traps().filter(function (t) { return t.state === 'halted'; });
+    var floor = traps().filter(function (t) { return t.floor === state.data.floor; });
+    var floorJobs = floor.filter(isToCollect).length + floor.filter(isToBait).length;
+    var takeCount = c.take || 0;
+    var baitCount = c.rebait || 0;
+    var scroll = scroller('side', 'th-grow');
+    var need = traps().filter(needsYou).length;
+    var preyIcons = collect.filter(function (t) { return t.prey; }).map(function (t) { return preyOf(t.prey); });
+
+    scroll.appendChild(section(say('needsYou'), el('span', 'th-r', trapCount(need))));
+
+    if (collect.length) scroll.appendChild(todo(collect.length, say('tCollect'), names(preyIcons.map(function (p) { return p.name; })), preyIcons));
+    if (bait.length) scroll.appendChild(todo(bait.length, say('tBait'), names(bait.map(function (t) { return roomTitle(t) + ': ' + baitOf(t.next).name; })), bait.map(function (t) { return baitOf(t.next); })));
+    if (noBait.length) scroll.appendChild(todo(noBait.length, say('tNoBaitLeft'), say('tNoBaitLeftSub'), null, 'th-red'));
+    if (worn.length) scroll.appendChild(todo(worn.length, say('tBreaks'), names(worn.map(function (t) { return typeOf(t.type).name + ', ' + (t.room || '?'); })), null, 'th-or'));
+    if (halted.length) scroll.appendChild(todo(halted.length, say('stHalted'), names(halted.map(function (t) { return typeOf(t.type).name + ', ' + (t.room || '?'); })), null, 'th-dim'));
+    if (!need) scroll.appendChild(el('div', 'th-none', say('allFine')));
+
+    // The buttons stay pressable with nothing to do: a press then says so.
+    put(side, scroll, put(el('div', 'th-cta'), button(say('checkAll', takeCount + baitCount), 'checkall', null, true, 'th-gold th-big'),
+      el('div', 'th-cap', say('checkNote', takeCount, baitCount)),
+      put(el('div', 'th-subacts'), button(say('checkFloor', floorJobs), 'checkfloor', null, true, 'th-sm'), button(say('takeOnly', takeCount), 'takeall', null, true, 'th-sm'),
+        button(say('baitOnly', baitCount), 'rebaitall', null, true, 'th-sm'))));
   }
 
-  function needTag(trap) {
-    if (trap.state === 'prey') return tag(trap.prey ? preyOf(trap.prey).name : say('stPrey'), 'th-b-green');
-    if (trap.state === 'nobait') return tag(say('stNoBait'), 'th-b-red');
-    if (trap.worn) return tag(say('fBreaks'), 'th-b-amber');
-
-    return stateTag(trap);
-  }
-
-  // With no trap picked: every trap waiting on the player, catches first.
-  function needsList(well) {
-    var waiting = traps().filter(needsYou).sort(function (a, b) { return needRank(a) - needRank(b); });
-    var rows = el('div', 'th-rows');
-
-    well.appendChild(section(say('needsYou'), waiting.length ? el('span', 'th-r', String(waiting.length)) : null));
-
-    if (!waiting.length) well.appendChild(el('div', 'th-empty', say('allFine')));
-
-    waiting.slice(0, MAX_NEEDS).forEach(function (trap) {
-      rows.appendChild(put(act(el('div', 'th-row'), 'goto', trap.id), icon(typeOf(trap.type), 'th-i30'),
-        put(el('div', 'th-grow'), el('div', '', typeOf(trap.type).name), el('div', 'th-dim', roomTitle(trap))), needTag(trap)));
-    });
-
-    put(well, rows, el('div', 'th-note', say('pickTrap')));
-  }
-
-  function trapDetail(well, trap) {
+  function trapDetail(side, trap) {
     var type = typeOf(trap.type);
     var isArmed = state.armed === 'dismantle|' + trap.id;
-    var head = put(el('div', 'th-dhead'), icon(type, 'th-i56'),
-      put(el('div', 'th-dname'), el('div', 'th-big', type.name), el('div', 'th-dim', roomTitle(trap))), stateTag(trap));
-    var acts = put(el('div', 'th-bar'),
-      button(say('take'), 'take', trap.id, trap.canTake && !trap.queued, 'th-hot'),
-      button(say('rebait'), 'rebait', trap.id, trap.canBait),
-      el('span', 'th-grow'),
-      button(isArmed ? say('confirm') : say('dismantle'), 'dismantle', trap.id, true, 'th-danger' + (isArmed ? ' th-armed' : '')));
+    var scroll = scroller('detail', 'th-grow');
+    var grid = el('div', 'th-kv');
+    var main = trap.canTake ? button(say('take'), 'take', trap.id, !trap.queued, 'th-gold th-big') : button(say('rebait'), 'rebait', trap.id, !!trap.canBait, 'th-gold th-big');
 
-    put(well, head, acts, catchRow(trap), baitBox(trap), oddsBox(trap), wearBox(trap));
+    put(scroll, button('\u2039 ' + say('back'), 'back', null, true, 'th-ghost th-sm'),
+      put(el('div', 'th-det-hd'), icon(type, 'th-i56'), put(el('div', 'th-mid'), el('div', 'th-nm', type.name), el('div', 'th-wh', roomTitle(trap))), statePill(trap)));
+
+    put(scroll, section(say('oddsNow'), el('span', 'th-r', trap.chance + '%')), oddsList(trap), section(say('thisTrap')));
+    kv(grid, say('inTrap'), inTrapLine(trap));
+    kv(grid, say('preset'), presetChips(trap));
+
+    if (trap.canBait) kv(grid, say('nextBait'), trap.next ? put(el('b'), icon(baitOf(trap.next), 'th-i22'), text(baitOf(trap.next).name), el('span', 'th-dim', say('own', owned(trap.next)))) : el('b', 'th-red', say('nextNone')));
+
+    kv(grid, say('wear'), put(el('b'), durabilityBar(trap), el('span', trap.worn ? 'th-or' : 'th-dim', (trap.worn ? say('breaks') : trap.catches != null ? say('catches', trap.catches) : '') + ' (' + trap.dur + ' / ' + trap.max + ')')));
+
+    scroll.appendChild(grid);
+
+    if (trap.store) scroll.appendChild(el('div', 'th-note', say('store', trap.store)));
+
+    var preset = presetById(trap.preset);
+
+    if (preset) put(scroll, section(preset.name), stepRows(preset, trap));
+
+    put(side, scroll, put(el('div', 'th-cta'), main,
+      put(el('div', 'th-subacts'), trap.canTake ? button(say('rebait'), 'rebait', trap.id, !!trap.canBait, 'th-sm') : null,
+        button(isArmed ? say('confirm') : say('dismantle'), 'dismantle', trap.id, true, 'th-sm th-danger' + (isArmed ? ' th-armed' : '')))));
   }
 
-  function catchRow(trap) {
-    if (!trap.prey) return null;
+  function inTrapLine(trap) {
+    if (trap.prey) return put(el('b'), icon(preyOf(trap.prey), 'th-i22'), el('span', 'th-green', preyOf(trap.prey).name), trap.queued ? tag(say('queued'), 'th-p-good') : null);
+    if (trap.bait) return put(el('b'), icon(baitOf(trap.bait), 'th-i22'), text(baitOf(trap.bait).name));
 
-    var prey = preyOf(trap.prey);
-
-    return put(el('div', 'th-nrow th-next'), icon(prey, 'th-i30'), el('span', 'th-grow', say('caught', prey.name)), trap.queued ? tag(say('queued'), 'th-b-green') : null);
+    return el('b', 'th-dim', say('none'));
   }
 
-  // The trap's preset: its type's default or one of its own, every step in order and what the player has of it.
-  function baitBox(trap) {
-    var box = put(el('div', 'th-box'), el('h4', '', say('preset')));
+  // The trap's preset: its type's default or one of its own.
+  function presetChips(trap) {
+    var box = el('div');
     var chips = el('div', 'th-chips');
     var fallback = defaultPresetFor(trap.type);
-    var preset = presetById(trap.preset);
 
     chips.appendChild(chip(say('typeDefault', fallback ? fallback.name : say('none')), 'assign', '|' + trap.id, !trap.own));
     presets().forEach(function (p) { chips.appendChild(chip(p.name, 'assign', p.id + '|' + trap.id, trap.own && p.id === trap.preset)); });
@@ -1062,14 +994,11 @@
       box.appendChild(el('div', 'th-dim', say('noSaveYet')));
     }
 
-    if (preset) box.appendChild(stepRows(preset, trap));
-    if (trap.canBait) box.appendChild(el('div', trap.next ? 'th-green' : 'th-red', trap.next ? say('next', baitOf(trap.next).name) : say('nextNone')));
-
     return box;
   }
 
   function stepRows(preset, trap) {
-    var rows = el('div', 'th-rows th-tight');
+    var rows = el('div');
     var accepts = typeOf(trap.type).accepts || [];
     var lit = trap.bait || trap.next || 0;
 
@@ -1086,13 +1015,15 @@
 
     if (preset.lastResort) rows.appendChild(put(el('div', 'th-nrow'), el('span', 'th-ordn', '\u221e'), el('span', 'th-grow th-dim', say('lastResort'))));
 
+    rows.appendChild(put(act(el('div', 'th-nrow th-link'), 'presetgo', preset.id), el('span', 'th-ordn', '\u203a'), el('span', 'th-grow th-dim', say('tabPresets'))));
+
     return rows;
   }
 
   // The chance of a catch at the next check, split by prey; the rest of the chance is shown as nothing.
-  function oddsBox(trap) {
+  function oddsList(trap) {
     var odds = trap.odds || [];
-    var box = put(el('div', 'th-box'), put(el('h4', ''), el('span', '', say('oddsNow')), el('span', 'th-hnum', trap.chance + '%')));
+    var box = el('div');
     var listed = 0;
 
     odds.forEach(function (o) {
@@ -1110,30 +1041,22 @@
   }
 
   function oddsRow(iconNode, name, pct, extraClass) {
-    var track = el('span', 'th-track');
-    var fill = el('span', 'th-fill' + (extraClass ? ' th-grey' : ''));
+    var track = el('span', 'th-bar th-wide' + (extraClass ? ' th-grey' : ' th-gold'));
+    var fill = el('i');
 
     fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
     track.appendChild(fill);
 
-    return put(el('div', 'th-orow' + extraClass), iconNode || el('span', 'th-ispace'), el('span', 'th-grow', name), track, el('span', 'th-num', pct + '%'));
+    return put(el('div', 'th-orow' + extraClass), iconNode || el('span', 'th-ispace'), el('span', 'th-wh', name), track, el('span', 'th-num', pct + '%'));
   }
 
-  function wearBox(trap) {
-    var box = put(el('div', 'th-box'), put(el('h4', ''), el('span', '', say('wear')), el('span', 'th-hnum', trap.dur + ' / ' + trap.max)), durabilityBar(trap, '100%'));
-
-    if (trap.catches != null) box.appendChild(el('div', trap.worn ? 'th-red' : 'th-dim', trap.worn ? say('breaks') : say('catches', trap.catches)));
-
-    return box;
-  }
-
-  // Picking and checking only touch the cards involved and the panes beside them; the list is not rebuilt.
+  // Picking only touches the rows involved and the side beside them; the list is not rebuilt.
   function pickTrap(id) {
     state.sel = state.sel === id ? '' : id;
     showPicked();
   }
 
-  // From the needs list or another tab: picks the trap and brings its card into view, clearing filters that hide it.
+  // From another tab: picks the trap and brings its row into view, clearing a filter that hides it.
   function gotoTrap(id) {
     var trap = trapById(id);
 
@@ -1141,93 +1064,80 @@
 
     state.sel = id;
 
-    if (!isShown(trap)) {
+    if (!shows(trap, state.show) || !matchesSearch(trap)) {
       state.show = 'all';
-      state.ftype = 0;
-      state.froom = '';
+      state.trapSearch = '';
     }
 
-    if (state.tab !== 'traps' || !ui.cards || !ui.cards[id]) {
+    if (state.tab !== 'traps' || !ui.rows || !ui.rows[id]) {
       state.tab = 'traps';
       render();
     } else {
       showPicked();
     }
 
-    var card = ui.cards && ui.cards[id];
+    var row = ui.rows && ui.rows[id];
 
-    if (card && card.scrollIntoView) card.scrollIntoView({ block: 'nearest' });
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
   }
 
   function showPicked() {
-    if (!ui.cards || !ui.detail) {
+    if (!ui.rows || !ui.side) {
       render();
 
       return;
     }
 
-    Object.keys(ui.cards).forEach(function (key) { setClass(ui.cards[key], 'th-sel', key === state.sel); });
-    fillDetail();
+    Object.keys(ui.rows).forEach(function (key) { setClass(ui.rows[key], 'th-sel-on', key === state.sel); });
+    fillSide();
   }
 
-  function checkTrap(id) {
-    state.checks[id] = !state.checks[id];
+  // ---------- Bait tab ----------
 
-    var card = ui.cards && ui.cards[id];
-
-    if (!card) {
-      render();
-
-      return;
-    }
-
-    var check = card.querySelector('.th-chk');
-
-    setClass(check, 'th-on', state.checks[id]);
-    check.textContent = state.checks[id] ? '\u2713' : '';
-    fillActs();
-  }
-
-  function clearChecks() {
-    state.checks = {};
-    render();
-  }
-
-  // ---------- Bait presets tab ----------
-
-  function renderPresets() {
+  // Presets on the left, the one picked in the middle, and the allowed bait on the right.
+  function renderBait() {
     syncDraft();
 
-    var side = el('div', 'th-plist');
+    var left = el('div', 'th-c330');
     var list = scroller('plist');
-    var editor = scroller('editor', 'th-editor');
-    var uses = scroller('uses', 'th-uses');
+    var main = el('div', 'th-main');
+    var editor = scroller('editor', 'th-grow');
 
     list.appendChild(section(say('tabPresets')));
-    presets().forEach(function (p) { list.appendChild(presetItem(p)); });
-    put(side, list, button('+ ' + say('newPreset'), 'newpreset', null, true));
+    presets().forEach(function (p) { list.appendChild(presetCard(p)); });
+    put(list, chip('+ ' + say('newPreset'), 'newpreset', null, false), section(say('typeUses')));
+    cat.typeList.forEach(function (type) { list.appendChild(typeDefaultRow(type)); });
+    left.appendChild(list);
 
-    if (state.draft) {
-      fillEditor(editor);
-      fillUses(uses);
-    }
+    if (state.draft) fillEditor(editor);
 
-    put(ui.body, side, editor, uses);
+    main.appendChild(editor);
+    ui.side = el('div', 'th-side');
+    fillAllowedSide();
+    put(ui.body, left, main, ui.side);
   }
 
-  function presetItem(p) {
-    var icons = el('div', 'th-icons');
+  function presetCard(p) {
+    var icons = el('div', 'th-ics');
     var used = traps().filter(function (t) { return t.preset === p.id; }).length;
     var notes = [];
 
-    p.steps.slice(0, 4).forEach(function (s) { icons.appendChild(icon(baitOf(s.item), 'th-i18')); });
+    p.steps.slice(0, 6).forEach(function (s) { icons.appendChild(icon(baitOf(s.item), 'th-i22')); });
 
     if ((p.types || []).length) notes.push(say('defaultFor') + ' ' + p.types.map(function (t) { return typeOf(t).name; }).join(', '));
 
     notes.push(trapCount(used));
 
-    return put(act(el('div', 'th-pitem' + (p.id === state.presetId ? ' th-sel' : '')), 'preset', p.id),
-      put(el('div', 'th-lbl'), el('b', '', p.name), el('small', '', notes.join(' \u00b7 '))), icons);
+    return put(act(el('div', 'th-pcard' + (p.id === state.presetId ? ' th-on' : '')), 'preset', p.id),
+      el('div', 'th-nm', p.name), el('div', 'th-wh', notes.join(' \u00b7 ')), icons.firstChild ? icons : null);
+  }
+
+  // Each trap type and the preset it falls back to; a press opens that preset.
+  function typeDefaultRow(type) {
+    var preset = defaultPresetFor(type.id);
+    var row = put(el('div', 'th-trow'), icon(type, 'th-i30'), el('span', 'th-wh', type.name), el('span', preset ? '' : 'th-dim', preset ? preset.name : say('none')));
+
+    return preset ? act(row, 'preset', preset.id) : row;
   }
 
   // The editor works on a copy, so a refresh from the game never throws away what the player is typing.
@@ -1268,32 +1178,31 @@
 
   function fillEditor(editor) {
     var d = state.draft;
-    var name = el('input', 'th-inp');
+    var name = el('input', 'th-inp th-name');
     var isArmed = state.armed === 'deletepreset|' + d.id;
-    var steps = el('div', 'th-rows th-tight');
+    var steps = el('div', 'th-fb');
     var firstUsable = -1;
 
     name.setAttribute('data-field', 'name');
     name.setAttribute('placeholder', say('name'));
     name.value = d.name;
-    name.style.width = '300px';
 
     d.steps.forEach(function (s, i) {
       if (firstUsable < 0 && isAllowed(s.item) && owned(s.item) > s.keep) firstUsable = i;
     });
 
     put(editor,
-      put(el('div', 'th-bar'), name, button(say('save'), 'savepreset', null, true, 'th-hot'),
+      put(el('div', 'th-edhd'), name, button(say('save'), 'savepreset', null, true, 'th-gold'),
         d.id ? button(isArmed ? say('confirm') : say('delete'), 'deletepreset', d.id, true, 'th-danger' + (isArmed ? ' th-armed' : '')) : null,
-        el('span', 'th-grow'), tag(say('unsaved'), 'th-b-amber th-dirty')),
+        el('span', 'th-grow'), tag(say('unsaved'), 'th-p-warn th-dirty')),
       section(say('steps'), el('span', 'th-r', say('stepsNote'))));
     markDirty(editor);
 
-    if (!d.steps.length) editor.appendChild(el('div', 'th-note', say('noSteps')));
+    if (!d.steps.length) steps.appendChild(el('div', 'th-note', say('noSteps')));
 
     d.steps.forEach(function (step, i) { steps.appendChild(stepEditor(step, i, d.steps.length, i === firstUsable)); });
 
-    if (d.lastResort) steps.appendChild(put(el('div', 'th-dash'), text('\u221e  ' + say('lastResort'))));
+    if (d.lastResort) steps.appendChild(el('div', 'th-dash', '\u221e  ' + say('lastResort')));
 
     put(editor, steps, section(say('addBait')), addPicker(),
       section(say('rules')),
@@ -1302,6 +1211,7 @@
       setRow(say('spoilFirst'), null, switchButton(d.spoilFirst, 'spoil')),
       setRow(say('auto'), say('autoNote'), segment(AUTOS.map(function (a) { return [a[0], say(a[1])]; }), d.auto, 'autoset')),
       setRow(say('defaultFor'), null, typeChips(d)));
+    fillUses(editor);
   }
 
   function typeChips(d) {
@@ -1316,8 +1226,8 @@
     var bait = baitOf(step.item);
     var allowed = isAllowed(step.item);
     var have = owned(step.item);
-    var row = el('div', 'th-step' + (!allowed ? ' th-bad' : have <= step.keep ? ' th-short' : isFirst ? ' th-go' : ''));
-    var title = put(el('b'), el('span', '', bait.name), allowed ? null : tag(say('blocked'), 'th-b-red'));
+    var row = el('div', 'th-it' + (!allowed ? ' th-bad' : have <= step.keep ? ' th-short' : isFirst ? ' th-go' : ''));
+    var title = put(el('b'), el('span', '', bait.name), allowed ? null : tag(say('blocked'), 'th-p-urgent'));
     var info = put(el('div', 'th-sinfo'), title, el('small', have > step.keep ? '' : 'th-red', say('own', have) + ' \u00b7 ' + kindName(bait)), drawIcons(bait, 6));
     var stepper = put(el('div', 'th-stepper'), plainButton('th-stp', '-', 'keepless', i, step.keep > 0), el('b', '', String(step.keep)),
       plainButton('th-stp', '+', 'keepmore', i, step.keep < MAX_KEEP));
@@ -1325,11 +1235,11 @@
       plainButton('th-ib th-del', '\u00d7', 'stepdel', i, true));
     var controls = put(el('div', 'th-sctl'), allowed ? null : button(say('allow'), 'allow', '1|' + step.item, true, 'th-sm'), el('span', 'th-dim', say('keep')), stepper, moves);
 
-    return put(row, el('span', 'th-ord', String(i + 1)), icon(bait, 'th-i30'), info, controls);
+    return put(row, el('span', 'th-o', String(i + 1)), icon(bait, 'th-i30'), info, controls);
   }
 
   function drawIcons(bait, max) {
-    var icons = el('div', 'th-icons');
+    var icons = el('div', 'th-ics');
 
     (bait.draws || []).slice(0, max).forEach(function (id) { icons.appendChild(icon(preyOf(id), 'th-i18')); });
 
@@ -1340,13 +1250,11 @@
   function addPicker() {
     var box = el('div', 'th-picker');
     var search = el('input', 'th-inp th-small');
-    var list = el('div', 'th-col');
+    var list = el('div');
 
-    list.style.gap = '2px';
     search.setAttribute('data-field', 'addsearch');
     search.setAttribute('placeholder', say('search'));
     search.value = state.addSearch;
-    list.id = 'th-addlist';
     put(box, search, list);
     ui.addList = list;
     fillAddList();
@@ -1370,7 +1278,7 @@
     list.textContent = '';
     found.slice(0, MAX_ADD).forEach(function (b) {
       list.appendChild(put(act(el('div', 'th-prow'), 'stepadd', b.id), icon(b, 'th-i22'), el('span', 'th-grow', b.name), el('span', 'th-dim', say('own', owned(b.id))),
-        tag(say(isAllowed(b.id) ? 'allowed' : 'blocked'), isAllowed(b.id) ? 'th-b-green' : 'th-b-red')));
+        tag(say(isAllowed(b.id) ? 'allowed' : 'blocked'), isAllowed(b.id) ? 'th-p-good' : 'th-p-urgent')));
     });
 
     if (!found.length) list.appendChild(el('div', 'th-dim', say('none')));
@@ -1383,12 +1291,12 @@
 
     well.appendChild(section(say('usedBy'), el('span', 'th-r', String(using.length))));
 
-    if (!using.length) well.appendChild(el('div', 'th-empty', say('usedNone')));
+    if (!using.length) well.appendChild(el('div', 'th-note', say('usedNone')));
 
     using.forEach(function (trap) {
-      well.appendChild(put(act(el('div', 'th-row'), 'goto', trap.id), icon(typeOf(trap.type), 'th-i30'),
-        put(el('div', 'th-grow'), el('div', '', typeOf(trap.type).name), el('div', 'th-dim', roomTitle(trap))),
-        tag(say(trap.own ? 'ownPick' : 'useDefault'), trap.own ? 'th-b-amber' : 'th-b-dim')));
+      well.appendChild(put(act(el('div', 'th-trow'), 'goto', trap.id), icon(typeOf(trap.type), 'th-i30'),
+        put(el('span', 'th-wh'), text(typeOf(trap.type).name + ' \u00b7 ' + roomTitle(trap))),
+        tag(say(trap.own ? 'ownPick' : 'useDefault'), trap.own ? 'th-p-warn' : 'th-p-dim')));
     });
   }
 
@@ -1471,26 +1379,7 @@
     sendAction('savepreset|' + JSON.stringify(state.draft));
   }
 
-  // ---------- Allowed bait tab ----------
-
-  function renderAllowed() {
-    var side = scroller('wlside', 'th-side');
-    var mid = el('div', 'th-mid');
-    var search = el('input', 'th-inp th-small');
-    var grid = scroller('wlgrid');
-
-    search.setAttribute('data-field', 'search');
-    search.setAttribute('placeholder', say('search'));
-    search.value = state.search;
-    grid.style.flex = '1';
-    ui.grid = grid;
-    ui.baitDetail = scroller('baitdetail', 'th-detail');
-    fillBaitSide(side);
-    put(mid, search, grid);
-    put(ui.body, side, mid, ui.baitDetail);
-    fillBaitGrid();
-    fillBaitDetail();
-  }
+  // ---------- Allowed bait ----------
 
   function baitShows(b, show) {
     switch (show) {
@@ -1507,26 +1396,49 @@
     }
   }
 
-  function fillBaitSide(side) {
-    var showChips = el('div', 'th-chips');
+  // The right side of the Bait tab: the allowed list with its filters and quick picks, or one bait picked from it.
+  function fillAllowedSide() {
+    var side = ui.side;
+    var b = state.baitSel ? cat.baits[state.baitSel] : null;
+
+    side.textContent = '';
+
+    if (b) {
+      baitDetail(side, b);
+
+      return;
+    }
+
+    var search = el('input', 'th-inp th-small');
     var kindChips = el('div', 'th-chips');
-    var inPresets = cat.baitList.filter(function (b) { return presetUses[b.id] && !isAllowed(b.id); }).map(function (b) { return b.id; });
-    var universal = cat.baitList.filter(function (b) { return b.kind === 'universal' && owned(b.id) > 0 && !isAllowed(b.id); }).map(function (b) { return b.id; });
+    var inPresets = cat.baitList.filter(function (x) { return presetUses[x.id] && !isAllowed(x.id); }).map(function (x) { return x.id; });
+    var universal = cat.baitList.filter(function (x) { return x.kind === 'universal' && owned(x.id) > 0 && !isAllowed(x.id); }).map(function (x) { return x.id; });
 
-    BAIT_SHOWS.forEach(function (s) {
-      var count = cat.baitList.filter(function (b) { return baitShows(b, s[0]); }).length;
-
-      showChips.appendChild(chip(say(s[1]), 'filter', s[0], state.baitShow === s[0], count));
-    });
+    search.setAttribute('data-field', 'search');
+    search.setAttribute('placeholder', say('search'));
+    search.value = state.search;
     KINDS.forEach(function (kind) { kindChips.appendChild(chip(say(KIND_WORD[kind]), 'kind', kind, state.kind === kind)); });
+    ui.baitList = scroller('baitlist', 'th-grow');
 
-    put(side, caption(say('show')), showChips, caption(say('kinds')), kindChips, caption(say('quick')),
-      put(el('div', 'th-qcol'),
+    put(side, section(say('tabAllowed'), el('span', 'th-r', String((state.data.allowed || []).length))),
+      showChips(), search, kindChips, ui.baitList,
+      put(el('div', 'th-q2'),
         button(say('allowPresets') + ' (' + inPresets.length + ')', 'allow', '1|' + inPresets.join(','), inPresets.length > 0),
         button(say('allowUniversal') + ' (' + universal.length + ')', 'allow', '1|' + universal.join(','), universal.length > 0),
         shownButton(say('allowShown'), '1', ''),
         shownButton(say('blockShown'), '0', 'th-danger')),
-      el('div', 'th-note', say('allowedNote')));
+      el('div', 'th-hint', say('allowedNote')));
+    fillBaitList();
+  }
+
+  function showChips() {
+    var box = el('div', 'th-chips');
+
+    BAIT_SHOWS.forEach(function (s) {
+      box.appendChild(chip(say(s[1]), 'filter', s[0], state.baitShow === s[0], cat.baitList.filter(function (b) { return baitShows(b, s[0]); }).length));
+    });
+
+    return box;
   }
 
   function shownBaits() {
@@ -1542,34 +1454,23 @@
     });
   }
 
-  // Owned bait first, then the rest; Allow all shown and Block all shown act on every bait that matches, past the cut too.
-  function fillBaitGrid() {
-    var grid = ui.grid;
+  // Owned bait first; Allow all shown and Block all shown act on every bait that matches, past the cut too.
+  function fillBaitList() {
+    var list = ui.baitList;
 
-    if (!grid) return;
+    if (!list) return;
 
     var shown = shownBaits();
-    var room = MAX_CARDS;
 
-    grid.textContent = '';
-    ui.baitCards = {};
+    list.textContent = '';
+    shown.slice(0, MAX_ROWS).forEach(function (b) { list.appendChild(baitRow(b)); });
 
-    [[shown.filter(function (b) { return owned(b.id) > 0; }), 'sOwned'], [shown.filter(function (b) { return !(owned(b.id) > 0); }), 'sNotOwned']].forEach(function (part) {
-      if (!part[0].length || !room) return;
-
-      var cards = el('div', 'th-wl');
-
-      part[0].slice(0, room).forEach(function (b) { cards.appendChild(baitCard(b)); });
-      room = Math.max(0, room - part[0].length);
-      put(grid, section(say(part[1]), el('span', 'th-r', String(part[0].length))), cards);
-    });
-
-    if (!shown.length) grid.appendChild(el('div', 'th-empty', say('noBaitMatch')));
-    if (shown.length > MAX_CARDS) grid.appendChild(el('div', 'th-note', say('more', shown.length - MAX_CARDS)));
+    if (!shown.length) list.appendChild(el('div', 'th-none', say('noBaitMatch')));
+    if (shown.length > MAX_ROWS) list.appendChild(el('div', 'th-note', say('more', shown.length - MAX_ROWS)));
 
     var ids = shown.map(function (b) { return b.id; }).join(',');
 
-    ui.body.querySelectorAll('[data-shown]').forEach(function (node) {
+    ui.side.querySelectorAll('[data-shown]').forEach(function (node) {
       node.setAttribute('data-args', node.getAttribute('data-shown') + '|' + ids);
       node.disabled = shown.length === 0;
     });
@@ -1582,74 +1483,56 @@
     return node;
   }
 
-  function baitCard(b) {
+  function baitRow(b) {
     var isOn = isAllowed(b.id);
     var have = owned(b.id);
-    var card = act(el('div', 'th-bait' + (isOn ? '' : ' th-off') + (b.id === state.baitSel ? ' th-sel' : '')), 'bait', b.id);
-    var info = put(el('div', 'th-binfo'), el('b', '', b.name), el('small', '', kindName(b) + (have ? ' \u00b7 ' + say('own', have) : '')), drawIcons(b, 6));
 
-    put(card, icon(b, 'th-i40'), info, button(say(isOn ? 'allowed' : 'blocked'), 'allow', (isOn ? '0|' : '1|') + b.id, true, 'th-sm ' + (isOn ? 'th-ok' : 'th-no')));
-    ui.baitCards[b.id] = card;
-
-    return card;
+    return put(act(el('div', 'th-bait' + (isOn ? '' : ' th-off')), 'bait', b.id), icon(b, 'th-i30'),
+      put(el('div', 'th-grow th-sinfo'), el('b', '', b.name), el('small', '', kindName(b) + (have ? ' \u00b7 ' + say('own', have) : ''))),
+      button(say(isOn ? 'allowed' : 'blocked'), 'allow', (isOn ? '0|' : '1|') + b.id, true, 'th-sm ' + (isOn ? 'th-ok' : 'th-no')));
   }
 
   function pickBait(id) {
     state.baitSel = state.baitSel === +id ? 0 : +id;
 
-    if (!ui.baitCards || !ui.baitDetail) {
+    if (!ui.side || state.tab !== 'bait') {
       render();
 
       return;
     }
 
-    Object.keys(ui.baitCards).forEach(function (key) { setClass(ui.baitCards[key], 'th-sel', +key === state.baitSel); });
-    fillBaitDetail();
+    fillAllowedSide();
   }
 
   // One bait: whether traps may use it, the presets that list it, what it draws in and which traps take it.
-  function fillBaitDetail() {
-    var well = ui.baitDetail;
-
-    if (!well) return;
-
-    well.textContent = '';
-
-    var b = state.baitSel ? cat.baits[state.baitSel] : null;
-
-    if (!b) {
-      put(well, el('div', 'th-empty', say('pickBait')), el('div', 'th-note', say('allowedNote')));
-
-      return;
-    }
-
+  function baitDetail(side, b) {
     var isOn = isAllowed(b.id);
     var uses = presetUses[b.id] || [];
-    var usesBox = put(el('div', 'th-box'), el('h4', '', say('inPresets')));
-    var draws = put(el('div', 'th-box'), el('h4', '', say('drawsIn')), preyChips(b.draws || []));
+    var scroll = scroller('baitdetail', 'th-grow');
     var takers = cat.typeList.filter(function (t) { return (t.accepts || []).indexOf(b.id) >= 0; });
     var takenChips = el('div', 'th-pchips');
-    var takenBox = put(el('div', 'th-box'), el('h4', '', say('takenByHead')), takenChips);
 
-    if (!uses.length) usesBox.appendChild(el('div', 'th-dim', say('notInPresets')));
+    put(scroll, button('\u2039 ' + say('back'), 'baitback', null, true, 'th-ghost th-sm'),
+      put(el('div', 'th-det-hd'), icon(b, 'th-i56'),
+        put(el('div', 'th-mid'), el('div', 'th-nm', b.name), el('div', 'th-wh', kindName(b) + ' \u00b7 ' + say('own', owned(b.id)))),
+        tag(say(isOn ? 'allowed' : 'blocked'), isOn ? 'th-p-good' : 'th-p-urgent')),
+      section(say('inPresets')));
+
+    if (!uses.length) scroll.appendChild(el('div', 'th-note', say('notInPresets')));
 
     uses.forEach(function (u) {
-      usesBox.appendChild(put(act(el('div', 'th-nrow th-link'), 'presetgo', u.preset.id), el('span', 'th-grow', say('presetStep', u.preset.name, u.step)),
+      scroll.appendChild(put(act(el('div', 'th-nrow th-link'), 'preset', u.preset.id), el('span', 'th-grow', say('presetStep', u.preset.name, u.step)),
         u.keep ? el('span', 'th-dim', say('keepN', u.keep)) : null));
     });
 
-    if (uses.length && !isOn) usesBox.appendChild(el('div', 'th-red', say('skipped')));
+    if (uses.length && !isOn) scroll.appendChild(el('div', 'th-red', say('skipped')));
 
     if (!takers.length) takenChips.appendChild(el('span', 'th-dim', say('none')));
 
     takers.forEach(function (t) { takenChips.appendChild(put(el('span', 'th-pchip'), icon(t, 'th-i22'), el('span', '', t.name))); });
 
-    put(well,
-      put(el('div', 'th-dhead'), icon(b, 'th-i56'),
-        put(el('div', 'th-dname'), el('div', 'th-big', b.name), el('div', 'th-dim', kindName(b) + ' \u00b7 ' + say('own', owned(b.id)))),
-        tag(say(isOn ? 'allowed' : 'blocked'), isOn ? 'th-b-green' : 'th-b-red')),
-      put(el('div', 'th-bar'), button(say(isOn ? 'block' : 'allow'), 'allow', (isOn ? '0|' : '1|') + b.id, true, isOn ? 'th-danger' : 'th-hot')),
-      usesBox, draws, takenBox);
+    put(scroll, section(say('drawsIn')), preyChips(b.draws || []), section(say('takenByHead')), takenChips);
+    put(side, scroll, put(el('div', 'th-cta'), button(say(isOn ? 'block' : 'allow'), 'allow', (isOn ? '0|' : '1|') + b.id, true, isOn ? 'th-big th-danger' : 'th-big th-gold')));
   }
 
   function preyChips(ids) {
@@ -1668,13 +1551,22 @@
 
   // ---------- Settings tab ----------
 
+  function keyCap(name) {
+    return el('span', 'th-kbd th-key', name || say('keyOff'));
+  }
+
   function renderSettings() {
     var data = state.data;
-    var well = scroller('settings', 'th-settings');
+    var main = el('div', 'th-main');
+    var well = scroller('settings', 'th-grow');
     var sounds = data.sounds || {};
     var isElsewhere = !!data.soundsElsewhere;
 
-    put(well, section(say('sounds')), el('div', 'th-dim', say('soundsNote')));
+    well.style.maxWidth = '980px';
+    put(well, section(say('keys')),
+      setRow(say('keyCheck'), say('keyCheckNote'), keyCap(data.checkKey)),
+      setRow(say('keyWindow'), state.key ? say('keyWindowNote') : say('keyNone'), keyCap(state.key)),
+      section(say('sounds')), el('div', 'th-note', say('soundsNote')));
 
     if (isElsewhere) well.appendChild(el('div', 'th-banner', say('quietTraps')));
 
@@ -1682,9 +1574,9 @@
       well.appendChild(setRow(say(sound[1]), null, segment(MODES.map(function (m) { return [m[0], say(m[1])]; }), sounds[sound[0]], 'sound', !isElsewhere, sound[0] + '|')));
     });
 
-    put(well, section(say('tabSettings')),
-      setRow(state.key ? say('keyOpen', state.key) : say('keyNone'), say('presetFile'), null));
-    ui.body.appendChild(well);
+    put(well, section(say('kOther')), el('div', 'th-note', say('presetFile')));
+    main.appendChild(well);
+    ui.body.appendChild(main);
   }
 
   // ---------- shared ----------
