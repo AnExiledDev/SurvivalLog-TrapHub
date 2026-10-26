@@ -28,12 +28,17 @@
 - The allowed bait tab shows owned bait first, quick picks (every bait in your presets, every universal bait you own) and, for each bait, what it attracts, which traps take it and which presets use it.
 - The window responds faster: picking a trap or a bait no longer redraws the whole window, and each refresh sends far less to the game's web view.
 
-- After a game update, a hook that can no longer be placed is logged as an error, so the Mod Manager can mark the mod as maybe needing an update.
+- After a game update, Mod Manager can tell you if this mod may need an update.
 
 ## 0.1.1
 
-- With Exiled's Toolkit 0.6.0 or later, the HUD button takes its place in the Toolkit's tidy layout of the tool buttons.
+- With Exiled's Toolkit 0.6.0 or later, the HUD button lines up neatly with other mods' buttons.
 
 ## 0.1.0
 
-First release. A window for every trap at home: state, bait, wear and catch odds, Take all and Re-bait all, bait presets with fallbacks and auto re-bait, an allowed bait list, and a setting for each catch sound.
+- First release.
+- A window lists every trap at home with its state, bait, wear and catch odds.
+- Take all collects every catch, and Re-bait all baits every empty trap.
+- Bait presets give each trap a bait order to fall back on, and can re-bait a trap on their own.
+- An allowed bait list sets which bait the mod may use.
+- Each catch sound has its own setting.

@@ -1,5 +1,5 @@
 Name: Trap Hub
-Summary: Every trap at home in one window, grouped by room, and one key (J) or a button in the game's own trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps your food safe, and each trap shows its wear and catch odds.
+Summary: Every trap at home in one window, grouped by room, and one key (J) or a button in the game's own trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps food safe, and each trap shows its wear and catch odds.
 
 Description (BBCode):
 Every trap at home in one window: what each one holds, what bait it gets next, how worn it is and what it is likely to catch. Press [font=Courier New]J[/font] to check every trap: collect every catch, then bait every empty trap. Press [font=Courier New]Shift+J[/font], or the trap button in the tool column on the left of the screen, to open the window. The button shows how many traps hold a catch to take or wait for bait.
