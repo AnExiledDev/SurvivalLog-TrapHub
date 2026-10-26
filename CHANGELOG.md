@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Fixed: the search boxes and text boxes in Trap Hub now accept Chinese and other typing that needs an input method.
+- Made for Survival Log 1.1.19611.
+
 ## 0.4.1
 
 - Fixed a short freeze the first time Trap Hub read your traps after a save loaded. The trap list now loads a little at a time over the first moments of play.

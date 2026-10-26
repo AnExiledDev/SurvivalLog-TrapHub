@@ -49,7 +49,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the f
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.4.0 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
+Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.4.2 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
 
 ## Known issues
 
