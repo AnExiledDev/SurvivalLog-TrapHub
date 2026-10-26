@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using GameCore.HotUpdate.ReduxUI;
 using TrapHub.Core;
 using UnityEngine;
@@ -46,6 +45,12 @@ internal sealed class TrapSession
     private float _nextRefreshAt;
     private float _nextAutoAt;
     private TrapWorld? _lastWorld;
+    private ViewSettings? _settings;
+
+    // What the page's HUD rows and open window were drawn from: a read that matches is not drawn again. The Check
+    // traps route in the HUD starts from where the player stands, so the HUD is drawn again when they move.
+    private readonly DrawnFrom _hud = new(isPositionDrawn: true);
+    private readonly DrawnFrom _view = new(isPositionDrawn: false);
 
     public TrapSession(ITrapGame game, WebPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
     {
@@ -66,7 +71,8 @@ internal sealed class TrapSession
         _isPanelShifted = isPanelShifted;
         _checkKey = checkKey;
         _sentLive = null;
-        _shownView = "";
+        _settings = null;
+        ForgetDrawn();
     }
 
     /// <summary>How the page names the window's key, "Shift+J" when Shift is part of it; empty when there is none.</summary>
@@ -74,11 +80,15 @@ internal sealed class TrapSession
 
     private string CheckKeyName => _checkKey == KeyCode.None ? "" : _checkKey.ToString();
 
+    /// <summary>Made again only when a key or sound setting changes.</summary>
+    private ViewSettings Settings => _settings ??= new ViewSettings(_sounds, _isSoundsElsewhere, PanelKeyName, CheckKeyName);
+
     public void UseSounds(IReadOnlyDictionary<SoundGroup, SoundMode> sounds, bool isSoundsElsewhere)
     {
         _sounds = sounds;
         _isSoundsElsewhere = isSoundsElsewhere;
-        _shownView = "";
+        _settings = null;
+        ForgetDrawn();
     }
 
     /// <summary>Whether Check traps also baits the traps it empties (RebaitOnCheck).</summary>
@@ -86,7 +96,16 @@ internal sealed class TrapSession
     {
         _isRebaitOnCheck = isOn;
         _sentHud = "";
+        _hud.Forget();
         _nextRefreshAt = 0f;
+    }
+
+    /// <summary>The page may have lost what it shows, or a setting it shows changed: the next refresh draws everything again.</summary>
+    private void ForgetDrawn()
+    {
+        _shownView = "";
+        _view.Forget();
+        _hud.Forget();
     }
 
     public void Update()
@@ -98,32 +117,33 @@ internal sealed class TrapSession
 
         while (PageMessages.TryTake(out var command)) HandleSafely(command);
 
+        // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
         // The window's key wins when both keys are the same and Shift is not part of the window's key.
-        var isShiftHeld = InputGate.IsShiftHeld();
-
-        if (!_keyboard.IsClaimed && _panelKey != KeyCode.None && isShiftHeld == _isPanelShifted && Input.GetKeyDown(_panelKey))
+        if (!_keyboard.IsClaimed)
         {
-            Toggle();
+            if (_panelKey != KeyCode.None && Input.GetKeyDown(_panelKey) && InputGate.IsShiftHeld() == _isPanelShifted)
+            {
+                Toggle();
 
-            return;
-        }
+                return;
+            }
 
-        if (!_keyboard.IsClaimed && _checkKey != KeyCode.None && !isShiftHeld && Input.GetKeyDown(_checkKey))
-        {
-            Check("check traps (key)", null);
+            if (_checkKey != KeyCode.None && Input.GetKeyDown(_checkKey) && !InputGate.IsShiftHeld())
+            {
+                Check("check traps (key)", null);
 
-            return;
-        }
+                return;
+            }
 
-        if (_isOpen && !_keyboard.IsClaimed && Input.GetKeyDown(KeyCode.Escape))
-        {
-            Close();
+            if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
+            {
+                Close();
 
-            return;
+                return;
+            }
         }
 
         if (now >= _nextRefreshAt) Refresh(now);
-        if (now >= _nextAutoAt) RunAuto(now);
     }
 
     /// <summary>One command that throws must not cost the rest of the frame its commands or the key checks.</summary>
@@ -157,7 +177,7 @@ internal sealed class TrapSession
                 _sentBadge = null;
                 _sentCatalog = null;
                 _sentHud = "";
-                _shownView = "";
+                ForgetDrawn();
                 _nextRefreshAt = 0f;
                 break;
             case PageCommand.NoScript:
@@ -265,6 +285,8 @@ internal sealed class TrapSession
         // Without Exiled's Toolkit a changed setting is not applied again on its own, so the new mode is applied here too.
         _saveSound(group, mode);
         _sounds = new Dictionary<SoundGroup, SoundMode>(_sounds) { [group] = mode };
+        _settings = null;
+        _view.Forget();
         SoundGate.Use(_sounds);
         _page.Status(Texts.SoundSet.Say(IsChinese, Sounds.GroupName(group).Pick(IsChinese), Sounds.ModeLabel(mode).Pick(IsChinese)));
         Redraw();
@@ -275,11 +297,28 @@ internal sealed class TrapSession
     /// player, and an open window is redrawn when its view changed. A read that throws is logged by the game adapter and
     /// read as not ready, so the window stays up with the reason instead of holding the game's input with nothing in it.
     /// </summary>
+    /// <remarks>
+    /// While the game's tables are still being read (a slice a frame, after a save loads or the language changes) it
+    /// asks again next frame and leaves the HUD as it is. The auto pass uses the same read when it is due, and the game
+    /// is read again only when the pass baited something.
+    /// </remarks>
     private void Refresh(float now)
     {
         _nextRefreshAt = now + (_isOpen ? OpenRefreshSeconds : ClosedRefreshSeconds);
 
         var read = _game.Read();
+
+        if (read is TrapRead.NotReady { IsStillLoading: true })
+        {
+            _nextRefreshAt = now;
+
+            if (_isOpen) Show(read, isOpening: false);
+
+            return;
+        }
+
+        if (read is TrapRead.Ready ready && now >= _nextAutoAt && RunAuto(ready.World, now)) read = _game.Read();
+
         var world = (read as TrapRead.Ready)?.World;
 
         _lastWorld = world;
@@ -288,9 +327,31 @@ internal sealed class TrapSession
 
         if (world != null) SendCatalog(world.Catalog);
 
-        SendHud(world == null ? HudView.NotReady() : HudView.Ready(world, Book(), _game.FloorCost, _isRebaitOnCheck, CheckKeyName));
+        SendHudFor(world);
 
         if (_isOpen) Show(read, isOpening: false);
+    }
+
+    /// <summary>A read that matches the one the HUD rows were drawn from would draw the same rows, so they are not drawn again.</summary>
+    private void SendHudFor(TrapWorld? world)
+    {
+        if (world == null)
+        {
+            _hud.Forget();
+            SendHud(HudView.NotReady());
+
+            return;
+        }
+
+        var book = Book();
+
+        if (_hud.IsSame(world, book)) return;
+
+        var hudJson = HudView.Ready(world, book, _game.FloorCost, _isRebaitOnCheck, CheckKeyName);
+
+        SendHud(hudJson);
+
+        if (hudJson == _sentHud) _hud.Remember(world, book);
     }
 
     private void SendLive(bool isLive)
@@ -356,18 +417,24 @@ internal sealed class TrapSession
     /// <summary>The catalog goes first, once per game and language, since the view names items only by id.</summary>
     private void Show(TrapRead read, bool isOpening)
     {
-        var settings = new ViewSettings(_sounds, _isSoundsElsewhere, PanelKeyName, CheckKeyName);
         string view;
 
         switch (read)
         {
             case TrapRead.Ready ready:
+                var book = Book();
+
                 _lastWorld = ready.World;
                 SendCatalog(ready.World.Catalog);
-                view = TrapView.Ready(ready.World, Book(), settings);
+
+                if (!isOpening && _view.IsSame(ready.World, book)) return;
+
+                view = TrapView.Ready(ready.World, book, Settings);
+                _view.Remember(ready.World, book);
                 break;
             case TrapRead.NotReady notReady:
-                view = TrapView.NotReady(Texts.NotReady.Say(IsChinese, notReady.Reason), settings);
+                _view.Forget();
+                view = TrapView.NotReady(Texts.NotReady.Say(IsChinese, notReady.Reason), Settings);
                 break;
             default:
                 Close();
@@ -395,24 +462,27 @@ internal sealed class TrapSession
     }
 
     /// <summary>
-    /// Re-baits the traps whose preset asks for it, every few seconds. Only a pass that baited something says so, as a
-    /// toast, so a quiet base stays quiet.
+    /// Re-baits the traps whose preset asks for it, every few seconds, on the read the refresh just made. Only a pass
+    /// that baited something says so, as a toast, so a quiet base stays quiet. True when it said so.
     /// </summary>
-    private void RunAuto(float now)
+    private bool RunAuto(TrapWorld world, float now)
     {
         _nextAutoAt = now + AutoSeconds;
 
-        if (_lastWorld == null || !Book().Presets.Any(preset => preset.Auto != AutoRebait.Off)) return;
+        var book = Book();
 
-        var outcome = TrapRun.Auto(_game, Book(), now, _retryAt);
+        if (!TrapRun.HasAuto(book)) return false;
 
-        if (!TrapMessages.IsWorthShowing(outcome)) return;
+        var outcome = TrapRun.Auto(_game, world, book, now, _retryAt);
+
+        if (!TrapMessages.IsWorthShowing(outcome)) return false;
 
         var message = TrapMessages.Describe(outcome, IsChinese, isAuto: true);
 
         _log("auto: " + message);
         _page.Status(message);
-        Redraw();
+
+        return true;
     }
 
     /// <summary>
@@ -442,8 +512,8 @@ internal sealed class TrapSession
     }
 
     /// <summary>
-    /// Runs one press and shows what it did, then redraws so a queued badge or new count shows at once, and refreshes
-    /// on the next frame so the HUD panel catches up too. Null when the press threw.
+    /// Runs one press and shows what it did, then refreshes at once, so a queued badge or new count shows in the window
+    /// and the HUD panel from one read. Null when the press threw.
     /// </summary>
     private TrapOutcome? Press(string name, Func<TrapOutcome> press)
     {
@@ -463,8 +533,7 @@ internal sealed class TrapSession
         }
 
         _page.Status(message);
-        Redraw();
-        _nextRefreshAt = 0f;
+        Refresh(Time.unscaledTime);
 
         return outcome;
     }

@@ -17,24 +17,38 @@ internal sealed class WebPage
     private const float CheckSeconds = 2f;
     private const string ScriptResource = "TrapHub.page.js";
     private const string NoScriptReply = "window.vuplex&&window.vuplex.postMessage('" + PageCommand.Prefix + "noscript')";
+    private const string Probe = "window.__sltraphub||" + NoScriptReply;
 
     private readonly Action<string> _log;
     private string? _script;
     private float _nextCheckAt;
     private bool _hasReportedRunFailure;
     private bool? _wordsAreChinese;
+    private bool _hasCalledSinceCheck;
 
     public WebPage(Action<string> log)
     {
         _log = log;
     }
 
+    /// <summary>
+    /// Every call already answers "noscript" when the script is gone, so the check is only sent when nothing else has
+    /// gone to the page since the last one.
+    /// </summary>
     public void KeepInstalled(float now)
     {
         if (now < _nextCheckAt) return;
 
         _nextCheckAt = now + CheckSeconds;
-        Run("window.__sltraphub||" + NoScriptReply);
+
+        if (_hasCalledSinceCheck)
+        {
+            _hasCalledSinceCheck = false;
+
+            return;
+        }
+
+        Run(Probe);
     }
 
     public void Install()
@@ -78,7 +92,11 @@ internal sealed class WebPage
         var words = _wordsAreChinese == isChinese ? "" : PageWords.Script(isChinese);
         var isRun = Run($"{words}window.__sltraphub?window.__sltraphub.{expression}:{NoScriptReply}");
 
-        if (isRun) _wordsAreChinese = isChinese;
+        if (isRun)
+        {
+            _wordsAreChinese = isChinese;
+            _hasCalledSinceCheck = true;
+        }
 
         return isRun;
     }

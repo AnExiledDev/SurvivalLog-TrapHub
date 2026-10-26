@@ -108,7 +108,8 @@ public abstract record TrapRead
 
     public sealed record NoGame : TrapRead;
 
-    public sealed record NotReady(string Reason) : TrapRead;
+    /// <param name="IsStillLoading">The game is fine, the mod is still reading its tables a slice per frame; ask again next frame.</param>
+    public sealed record NotReady(string Reason, bool IsStillLoading = false) : TrapRead;
 
     public sealed record Ready(TrapWorld World) : TrapRead;
 }

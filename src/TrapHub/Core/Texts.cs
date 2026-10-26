@@ -37,6 +37,7 @@ public static class Texts
     public static readonly Phrase NotReady = new("Can't manage traps right now: {0}.", "现在无法管理陷阱：{0}。");
     public static readonly Phrase NoWorld = new("the game world is not loaded", "游戏世界尚未载入");
     public static readonly Phrase Away = new("you are away from home", "你不在家中");
+    public static readonly Phrase Loading = new("the trap list is still loading", "陷阱列表仍在载入");
     public static readonly Phrase ReadFailed = new("the traps could not be read, see " + Log, "无法读取陷阱，详见 " + Log);
     public static readonly Phrase Gone = new("That trap is gone.", "这个陷阱已经不在了。");
     public static readonly Counted BaitedCount = new(new("Baited 1 trap.", "已为 {0} 个陷阱布饵。"), new("Baited {0} traps.", "已为 {0} 个陷阱布饵。"));

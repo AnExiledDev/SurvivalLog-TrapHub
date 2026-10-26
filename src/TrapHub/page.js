@@ -100,6 +100,10 @@
   var isBusy = false;
   var busyTimer = 0;
   var hudVersion = 0;
+  // Bumped with each new catalog, so lines drawn from its names are redrawn when the names change.
+  var catalogSeq = 0;
+  // Whether anything was put into a HUD page since the game was last left; while not, the page check has nothing to do.
+  var hasPlaced = false;
   var hasReportedPageAccess = false;
   var hasReportedHudPlaced = false;
 
@@ -513,6 +517,7 @@
 
   function catalog(data) {
     cat = { types: {}, baits: {}, prey: {}, baitList: [], typeList: [] };
+    catalogSeq++;
 
     ((data && data.types) || []).forEach(function (t) { cat.types[t.id] = t; cat.typeList.push(t); });
     ((data && data.baits) || []).forEach(function (b) { cat.baits[b.id] = b; cat.baitList.push(b); });
@@ -1680,6 +1685,9 @@
   // The HUD is a same-origin iframe, so its document can be reached from here; polled because the game creates and
   // drops that iframe whenever it likes.
   function patchPages() {
+    // Out of a game with everything already taken back out, there is nothing to put in or take out.
+    if (!state.isLive && !hasPlaced) return;
+
     var frames = document.querySelectorAll('iframe');
 
     for (var i = 0; i < frames.length; i++) {
@@ -1702,6 +1710,9 @@
       placeHudButton(doc);
       patchTrapPanel(doc);
     }
+
+    // Each reachable HUD page has just had the additions taken out.
+    if (!state.isLive) hasPlaced = false;
   }
 
   function patchPagesSafely() {
@@ -1730,6 +1741,7 @@
 
     node.setAttribute('data-etk-dock', DOCK_ORDER);
     column.insertBefore(node, column.firstChild);
+    hasPlaced = true;
 
     if (!hasReportedHudPlaced) send('diag|HUD button placed in the tool column');
     hasReportedHudPlaced = true;
@@ -1848,7 +1860,11 @@
 
   var hudData = { ready: false };
   var hudById = {};
+  // Each trap's data as sent, so a row's second line is redrawn only when its own trap changed.
+  var hudKeyById = {};
   var hudSeq = 0;
+  var seenWords = null;
+  var wordsSeq = 0;
   var hasReportedVue = false;
   var hasReportedPanel = false;
 
@@ -1857,9 +1873,24 @@
   function hud(data) {
     hudData = data && data.ready ? data : { ready: false };
     hudById = {};
-    (hudData.traps || []).forEach(function (t) { hudById[t.id] = t; });
+    hudKeyById = {};
+    (hudData.traps || []).forEach(function (t) {
+      hudById[t.id] = t;
+      hudKeyById[t.id] = JSON.stringify(t);
+    });
     hudSeq++;
     patchPagesSafely();
+  }
+
+  // What a row's second line is drawn from besides its trap: the catalog's names and the plugin's words, which both
+  // change with the game's language.
+  function lookSeq() {
+    if (window.__sltraphubWords !== seenWords) {
+      seenWords = window.__sltraphubWords;
+      wordsSeq++;
+    }
+
+    return catalogSeq + '.' + wordsSeq;
   }
 
   // The HUD page's Vue state, which holds the trap rows' ids in the order the rows are drawn. Null if a game update
@@ -1879,10 +1910,16 @@
     var row = doc.querySelector('.trap-toggle-row');
 
     if (!row || !state.isLive || !hudData.ready) {
-      doc.querySelectorAll('.th-add').forEach(function (node) { node.remove(); });
+      // Searched for only once after they were put in, not on every check while the panel is closed or still loading.
+      if (doc.__thHasAdds) doc.querySelectorAll('.th-add').forEach(function (node) { node.remove(); });
+
+      doc.__thHasAdds = false;
 
       return;
     }
+
+    doc.__thHasAdds = true;
+    hasPlaced = true;
 
     var vue = vueState(doc);
 
@@ -1934,7 +1971,9 @@
       button.setAttribute('data-version', String(hudSeq));
     }
 
-    box.querySelector('input').checked = !!hudData.rebait;
+    var input = box.querySelector('input');
+
+    if (input.checked !== !!hudData.rebait) input.checked = !!hudData.rebait;
   }
 
   function checkButton(doc) {
@@ -2099,15 +2138,17 @@
     return node;
   }
 
-  // Rows are drawn in the order of the Vue state's trap list, so row i is that list's trap i.
+  // Rows are drawn in the order of the Vue state's trap list, so row i is that list's trap i. A line is redrawn only
+  // when its own trap's data, the names or the words changed, so one trap changing does not redraw every row.
   function placeRowLines(doc, list, vue) {
     var traps = (vue && vue.traps) || [];
     var rows = list.querySelectorAll('.trap-item-row');
+    var look = lookSeq();
 
     for (var i = 0; i < rows.length; i++) {
       var trap = traps[i];
       var data = trap ? hudById[String(trap.trapInstanceId)] : null;
-      var key = data ? data.id + '|' + hudSeq : '';
+      var key = data ? look + '|' + hudKeyById[data.id] : '';
       var sub = null;
 
       for (var c = 0; c < rows[i].children.length; c++) {

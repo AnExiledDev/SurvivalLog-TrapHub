@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
 using TrapHub.Core;
@@ -20,14 +22,28 @@ internal sealed class GameTraps : ITrapGame
     private const int TakeEverything = -1;
     private const int RarePrey = 2;
     private const string BaitTalent = "Buff/AE_TrapBaitMultiplier";
+    // The catalog is read a slice per frame, each slice stopping once it has used this much of the frame.
+    private const double SliceMilliseconds = 2.0;
 
     private readonly Action<string> _log;
     private readonly HashSet<string> _reportedFailures = new();
 
+    private Task<(IconIndex Icons, string Note)>? _iconScan;
     private IconIndex? _icons;
     private (IntPtr Config, bool IsChinese) _catalogKey;
     private TrapCatalog? _catalog;
     private Dictionary<string, (int Map, int Room)> _slots = new();
+
+    private SlicedJob? _build;
+    private (IntPtr Config, bool IsChinese) _buildKey;
+    private TrapManager? _buildTraps;
+    private TrapCatalog? _built;
+    private Dictionary<string, (int Map, int Room)> _builtSlots = new();
+
+    // Both come from the game's tables and map, so they hold until another game is loaded.
+    private (IntPtr Config, IntPtr World) _loadKey;
+    private readonly Dictionary<string, Spot> _positions = new();
+    private readonly Dictionary<(int From, int To), int> _floorCosts = new();
 
     public GameTraps(Action<string> log)
     {
@@ -122,27 +138,37 @@ internal sealed class GameTraps : ITrapGame
         }
     }
 
-    /// <summary>The game's own route between two floors, counted in segments; a route it cannot give falls back to counting levels.</summary>
+    /// <summary>
+    /// The game's own route between two floors, counted in segments; a route it cannot give falls back to counting
+    /// levels. The game builds a route from its floor tables alone, so each pair is asked once per loaded game.
+    /// </summary>
     public int FloorCost(int fromFloor, int toFloor)
     {
         if (fromFloor == toFloor) return 0;
+        if (_floorCosts.TryGetValue((fromFloor, toFloor), out var known)) return known;
+
+        var cost = Floors.Steps(fromFloor, toFloor);
 
         try
         {
             var route = FloorRouteHelper.GetRoute(Floors.MapId(fromFloor), Floors.MapId(toFloor));
 
-            if (route != null && route.Count > 0) return route.Count;
+            if (route != null && route.Count > 0) cost = route.Count;
         }
         catch (Exception ex)
         {
             ReportOnce("floor route", ex);
         }
 
-        return Floors.Steps(fromFloor, toFloor);
+        _floorCosts[(fromFloor, toFloor)] = cost;
+
+        return cost;
     }
 
     private TrapRead ReadWorld()
     {
+        AreIconsIn();
+
         var game = LoadedGame();
 
         if (game == null) return new TrapRead.NoGame();
@@ -155,12 +181,28 @@ internal sealed class GameTraps : ITrapGame
         if (!IsHome(agents)) return new TrapRead.NotReady(Texts.Away.Pick(isChinese));
 
         var catalog = Catalog(config, traps, isChinese);
+
+        if (catalog == null) return new TrapRead.NotReady(Texts.Loading.Pick(isChinese), IsStillLoading: true);
+
+        ForgetIfNewLoad(config, world);
+
         var roleId = role.InstanceId;
         var placed = ReadTraps(world, config, traps, catalog, roleId);
         var stock = ReadStock(world._ItemManager, catalog, roleId);
         var playerFloor = Floors.Level(agents.GetAgentFloor(roleId));
 
         return new TrapRead.Ready(new TrapWorld(catalog, placed, stock, ReadBonus(world), playerFloor, PositionOf(role), SaveSlot.CurrentKey()));
+    }
+
+    private void ForgetIfNewLoad(ConfigManager config, BattleLogicWorld world)
+    {
+        var key = (config.Pointer, world.Pointer);
+
+        if (key == _loadKey) return;
+
+        _loadKey = key;
+        _positions.Clear();
+        _floorCosts.Clear();
     }
 
     internal static (BattleLogicWorld World, ConfigManager Config, AgentManager Agents, LeadingRole Role)? LoadedGame()
@@ -222,20 +264,30 @@ internal sealed class GameTraps : ITrapGame
             actions != null && actions.HasActionInQueue(roleId, PickupPreyAction, trap.InstanceId));
     }
 
+    /// <summary>
+    /// Where a trap slot stands, from the home map's node table. A slot never moves, so each is asked once per loaded
+    /// game; the game also writes an error to its log on every ask for a slot its map does not name.
+    /// </summary>
     private Spot SlotPosition(ConfigManager config, string slotName)
     {
+        if (_positions.TryGetValue(slotName, out var known)) return known;
+
+        var spot = new Spot(0, 0, 0);
+
         try
         {
             var position = config.GetBuildingPositionAndRotation(slotName).Item1;
 
-            return new Spot(position.x, position.y, position.z);
+            spot = new Spot(position.x, position.y, position.z);
         }
         catch (Exception ex)
         {
             ReportOnce("trap position", ex);
-
-            return new Spot(0, 0, 0);
         }
+
+        _positions[slotName] = spot;
+
+        return spot;
     }
 
     private static TrapState StateOf(PlacedTrap trap) => TrapManager.GetTrapHudStatus(trap) switch
@@ -285,23 +337,62 @@ internal sealed class GameTraps : ITrapGame
         }
     }
 
-    /// <summary>The tables only change with the language, so the catalog is built once per game and language.</summary>
-    private TrapCatalog Catalog(ConfigManager config, TrapManager traps, bool isChinese)
+    /// <summary>
+    /// The tables only change with the language, so the catalog is built once per game and language. Building it asks
+    /// the game about every bait and prey, so it is read a slice per frame; null until it is all read.
+    /// </summary>
+    private TrapCatalog? Catalog(ConfigManager config, TrapManager traps, bool isChinese)
     {
         var key = (config.Pointer, isChinese);
 
         if (_catalog != null && _catalogKey == key) return _catalog;
 
-        _slots = ReadSlots(config);
-        _catalog = BuildCatalog(config, traps);
+        if (_build == null || _buildKey != key)
+        {
+            _build = new SlicedJob(CatalogSteps(config));
+            _buildKey = key;
+        }
+
+        var build = _build;
+        var sliceEndsAt = Stopwatch.GetTimestamp() + (long)(SliceMilliseconds * Stopwatch.Frequency / 1000.0);
+
+        // The trap manager is passed in on every slice, so the build never holds one from an earlier read.
+        _buildTraps = traps;
+
+        try
+        {
+            if (!build.Advance(() => Stopwatch.GetTimestamp() >= sliceEndsAt)) return null;
+        }
+        catch (Exception)
+        {
+            _build = null;
+
+            throw;
+        }
+        finally
+        {
+            _buildTraps = null;
+        }
+
+        _build = null;
+        _slots = _builtSlots;
+        _catalog = _built!;
         _catalogKey = key;
+        _built = null;
         _log($"read {_catalog.Types.Count} trap types, {_catalog.Baits.Count} baits, {_catalog.Prey.Count} prey, {_slots.Count} trap slots");
 
         return _catalog;
     }
 
-    private TrapCatalog BuildCatalog(ConfigManager config, TrapManager traps)
+    /// <summary>
+    /// The catalog's reads, one bait, prey or room per step. Each step reads the game's tables whole, so a step never
+    /// holds a game collection open across frames. Waits first for the icon scan, since every name comes with its icon.
+    /// </summary>
+    private IEnumerable<bool> CatalogSteps(ConfigManager config)
     {
+        while (!AreIconsIn()) yield return false;
+
+        var slots = ReadSlots(config);
         var types = new Dictionary<int, TrapType>();
         var trapRows = config._Config_Trap_Dict;
 
@@ -309,15 +400,47 @@ internal sealed class GameTraps : ITrapGame
         {
             foreach (var row in trapRows.Values)
             {
-                if (row != null) types[row.ID] = ReadType(config, traps, row);
+                if (row != null) types[row.ID] = ReadType(config, _buildTraps!, row);
             }
         }
 
-        var baitIds = types.Values.SelectMany(type => type.AcceptedBait).ToHashSet();
-        var preyIds = types.Values.SelectMany(type => type.Prey.Select(prey => prey.PreyId)).ToHashSet();
+        yield return true;
+
         var bias = ReadRoomBias(config);
 
-        return new TrapCatalog(types, ReadBaits(config, baitIds), ReadPrey(config, preyIds), ReadRoomNames(config, bias.Keys), bias.ToDictionary(pair => pair.Key, pair => (IReadOnlyDictionary<int, float>)pair.Value.Coefficients));
+        yield return true;
+
+        var baits = new Dictionary<int, BaitItem>();
+
+        foreach (var id in types.Values.SelectMany(type => type.AcceptedBait).ToHashSet())
+        {
+            baits[id] = ReadBait(config, id);
+
+            yield return true;
+        }
+
+        var prey = new Dictionary<int, PreyItem>();
+
+        foreach (var id in types.Values.SelectMany(type => type.Prey.Select(rate => rate.PreyId)).ToHashSet())
+        {
+            prey[id] = ReadPrey(config, id);
+
+            yield return true;
+        }
+
+        var names = new Dictionary<int, string>();
+
+        foreach (var id in slots.Values.Select(slot => slot.Room).Concat(bias.Keys).Where(id => id > 0).Distinct().ToList())
+        {
+            var name = RoomName(config, id, bias.TryGetValue(id, out var row) ? row.Name : null);
+
+            if (name != null) names[id] = name;
+
+            yield return true;
+        }
+
+        _builtSlots = slots;
+        _built = new TrapCatalog(types, baits, prey, names, bias.ToDictionary(pair => pair.Key, pair => (IReadOnlyDictionary<int, float>)pair.Value.Coefficients));
     }
 
     private TrapType ReadType(ConfigManager config, TrapManager traps, Config_Trap row)
@@ -344,43 +467,34 @@ internal sealed class GameTraps : ITrapGame
         }
     }
 
-    private Dictionary<int, BaitItem> ReadBaits(ConfigManager config, ISet<int> baitIds)
+    // The tables are read straight, not through ConfigManager.Get_Config_*: those write an error to the game's log for
+    // every id they do not have.
+    private BaitItem ReadBait(ConfigManager config, int id)
     {
-        var baits = new Dictionary<int, BaitItem>();
+        var row = config._Config_TrapBait_Dict is { } bait && bait.TryGetValue(id, out var found) ? found : null;
+        var item = ItemRow(config, id);
+        var coefficients = new Dictionary<int, float>();
 
-        foreach (var id in baitIds)
+        if (row != null)
         {
-            var row = config.Get_Config_TrapBait(id);
-            var item = config.Get_Config_Item(id);
-            var coefficients = new Dictionary<int, float>();
+            var prey = Ints(row.Prey_Id);
+            var values = Floats(row.Bait_coefficient);
 
-            if (row != null)
-            {
-                var prey = Ints(row.Prey_Id);
-                var values = Floats(row.Bait_coefficient);
-
-                for (var i = 0; i < prey.Count && i < values.Count; i++) coefficients[prey[i]] = values[i];
-            }
-
-            baits[id] = new BaitItem(id, ItemName(config, item, id), ItemIcon(item), BaitKinds.FromEffect(row?.Effect_Des_Local), coefficients);
+            for (var i = 0; i < prey.Count && i < values.Count; i++) coefficients[prey[i]] = values[i];
         }
 
-        return baits;
+        return new BaitItem(id, ItemName(config, item, id), ItemIcon(item), BaitKinds.FromEffect(row?.Effect_Des_Local), coefficients);
     }
 
-    private Dictionary<int, PreyItem> ReadPrey(ConfigManager config, ISet<int> preyIds)
+    private PreyItem ReadPrey(ConfigManager config, int id)
     {
-        var prey = new Dictionary<int, PreyItem>();
+        var item = ItemRow(config, id);
 
-        foreach (var id in preyIds)
-        {
-            var item = config.Get_Config_Item(id);
-
-            prey[id] = new PreyItem(id, ItemName(config, item, id), ItemIcon(item), item != null && item.Prey_Rarity >= RarePrey);
-        }
-
-        return prey;
+        return new PreyItem(id, ItemName(config, item, id), ItemIcon(item), item != null && item.Prey_Rarity >= RarePrey);
     }
+
+    private static Config_Item? ItemRow(ConfigManager config, int id) =>
+        config._Config_Item_Dict is { } items && items.TryGetValue(id, out var item) ? item : null;
 
     private static Dictionary<int, (string? Name, Dictionary<int, float> Coefficients)> ReadRoomBias(ConfigManager config)
     {
@@ -405,24 +519,13 @@ internal sealed class GameTraps : ITrapGame
         return bias;
     }
 
-    /// <summary>Names every room a trap slot sits in, from the map's room table, then the trap bias table's own name.</summary>
-    private Dictionary<int, string> ReadRoomNames(ConfigManager config, IEnumerable<int> biasRooms)
+    /// <summary>Names a room a trap slot sits in, from the map's room table, then the trap bias table's own name.</summary>
+    private static string? RoomName(ConfigManager config, int id, string? biasName)
     {
-        var names = new Dictionary<int, string>();
-        var roomIds = _slots.Values.Select(slot => slot.Room).Concat(biasRooms).Where(id => id > 0).Distinct();
+        var room = config._Config_MapRoom_Dict is { } rooms && rooms.TryGetValue(id, out var found) ? found : null;
+        var name = room == null ? null : Translate(config, room.Name) ?? NonEmpty(room.Name_Local);
 
-        foreach (var id in roomIds)
-        {
-            var room = config.Get_Config_MapRoom(id);
-            var bias = config.Get_Config_TrapRoomBias(id);
-            var name = room == null ? null : Translate(config, room.Name) ?? NonEmpty(room.Name_Local);
-
-            name ??= bias == null ? null : Translate(config, bias.Des_name_Local) ?? NonEmpty(bias.Des_name_Local);
-
-            if (name != null) names[id] = name;
-        }
-
-        return names;
+        return name ?? (biasName == null ? null : Translate(config, biasName) ?? biasName);
     }
 
     private static Dictionary<string, (int Map, int Room)> ReadSlots(ConfigManager config)
@@ -490,7 +593,42 @@ internal sealed class GameTraps : ITrapGame
         return values;
     }
 
-    private IconIndex Icons() => _icons ??= WebIcons.Load(_log);
+    private IconIndex Icons() => _icons ?? IconIndex.Empty;
+
+    /// <summary>
+    /// Whether the web icons are indexed. The first call starts the scan on a worker thread (the game ships well over a
+    /// thousand icon files), so it is done long before a save is loaded; what it found is logged here, on the main thread.
+    /// </summary>
+    private bool AreIconsIn()
+    {
+        if (_icons != null) return true;
+
+        _iconScan ??= StartIconScan();
+
+        if (!_iconScan.IsCompleted) return false;
+
+        var (icons, note) = _iconScan.Status == TaskStatus.RanToCompletion
+            ? _iconScan.Result
+            : (IconIndex.Empty, "no web icons, traps and items will show letters instead: " + _iconScan.Exception?.GetBaseException().Message);
+
+        _icons = icons;
+        _iconScan = null;
+        _log(note);
+
+        return true;
+    }
+
+    private static Task<(IconIndex Icons, string Note)> StartIconScan()
+    {
+        try
+        {
+            return WebIcons.StartScan();
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult((IconIndex.Empty, "no web icons, traps and items will show letters instead: " + ex.Message));
+        }
+    }
 
     private static string? Translate(ConfigManager config, string? key)
     {

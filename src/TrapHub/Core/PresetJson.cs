@@ -90,7 +90,7 @@ public static class PresetJson
             json.WriteEndObject();
         }
 
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 
     /// <summary>The editor's message, or null when it is not a preset. A blank name takes the fallback name.</summary>

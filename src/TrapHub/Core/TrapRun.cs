@@ -55,22 +55,32 @@ public static class TrapRun
     /// The auto pass: every empty trap whose preset re-baits on its own, on the player's floor for Nearby. A trap the
     /// game refused waits a minute before it is tried again, so a trap the game will not take bait in costs nothing.
     /// </summary>
-    public static TrapOutcome Auto(ITrapGame game, PresetBook book, float now, IDictionary<long, float> retryAt)
+    public static TrapOutcome Auto(ITrapGame game, PresetBook book, float now, IDictionary<long, float> retryAt) =>
+        WithWorld(game, world => Auto(game, world, book, now, retryAt));
+
+    /// <summary>The auto pass on a read the caller just made, so a refresh and its auto pass share one read of the game.</summary>
+    public static TrapOutcome Auto(ITrapGame game, TrapWorld world, PresetBook book, float now, IDictionary<long, float> retryAt)
     {
         const float RetrySeconds = 60f;
 
-        return WithWorld(game, world =>
+        return RebaitWhere(game, book, world, trap =>
         {
-            var outcome = RebaitWhere(game, book, world, trap =>
-            {
-                var auto = book.PresetFor(world.SaveKey, trap)?.Auto ?? AutoRebait.Off;
-                var isDue = auto == AutoRebait.Always || (auto == AutoRebait.Nearby && trap.Floor == world.PlayerFloor);
+            var auto = book.PresetFor(world.SaveKey, trap)?.Auto ?? AutoRebait.Off;
+            var isDue = auto == AutoRebait.Always || (auto == AutoRebait.Nearby && trap.Floor == world.PlayerFloor);
 
-                return isDue && !(retryAt.TryGetValue(trap.Id, out var at) && now < at);
-            }, failed => retryAt[failed] = now + RetrySeconds);
+            return isDue && !(retryAt.TryGetValue(trap.Id, out var at) && now < at);
+        }, failed => retryAt[failed] = now + RetrySeconds);
+    }
 
-            return outcome;
-        });
+    /// <summary>Whether any preset re-baits on its own; without one the auto pass has nothing to do and the game is not read for it.</summary>
+    public static bool HasAuto(PresetBook book)
+    {
+        for (var i = 0; i < book.Presets.Count; i++)
+        {
+            if (book.Presets[i].Auto != AutoRebait.Off) return true;
+        }
+
+        return false;
     }
 
     public static TrapOutcome Rebait(ITrapGame game, PresetBook book, long trapId) => WithTrap(game, trapId, (world, trap, type) =>

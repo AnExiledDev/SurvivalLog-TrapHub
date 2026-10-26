@@ -174,7 +174,7 @@ public static class TrapView
             PresetJson.WritePreset(single, preset);
         }
 
-        using var parsed = JsonDocument.Parse(buffer.ToArray());
+        using var parsed = JsonDocument.Parse(new ReadOnlyMemory<byte>(buffer.GetBuffer(), 0, (int)buffer.Length));
 
         json.WriteStartObject();
 
@@ -228,7 +228,7 @@ public static class TrapView
             json.WriteEndObject();
         }
 
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 }
 
@@ -268,7 +268,7 @@ public static class CatalogView
             json.WriteEndObject();
         }
 
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 
     private static void WriteType(Utf8JsonWriter json, TrapType type)

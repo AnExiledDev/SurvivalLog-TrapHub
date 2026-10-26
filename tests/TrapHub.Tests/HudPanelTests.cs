@@ -224,4 +224,78 @@ public class HudPanelTests
 
         Assert.Equal("0", page.Text("hudPage().querySelectorAll('.th-add').length"));
     }
+
+    [Fact]
+    public void Polls_after_the_game_is_left_add_nothing_and_the_next_game_gets_everything_back()
+    {
+        var page = Panel(Home(), isRebait: true);
+
+        page.Live(false, "J");
+        page.Poll();
+        page.Poll();
+
+        Assert.Equal("0", page.Text("hudPage().querySelectorAll('.th-add').length"));
+        Assert.False(page.Is("hudButton()"));
+
+        page.Live(true, "J");
+
+        Assert.True(page.Is("hudButton()"));
+        Assert.Equal("1", page.Text("hudPage().querySelectorAll('.th-check-btn').length"));
+        Assert.Equal("5", page.Text("hudPage().querySelectorAll('.th-sub').length"));
+    }
+
+    [Fact]
+    public void The_additions_go_when_the_traps_can_no_longer_be_read()
+    {
+        var page = Panel(Home(), isRebait: true);
+
+        page.Hud(HudView.NotReady());
+        page.Poll();
+
+        Assert.Equal("0", page.Text("hudPage().querySelectorAll('.th-add').length"));
+        Assert.True(page.Is("hudButton()"));
+    }
+
+    [Fact]
+    public void One_trap_changing_redraws_its_own_row_line_and_leaves_the_others_as_they_are()
+    {
+        var game = Home();
+        var page = Panel(game, isRebait: true);
+
+        page.Run("var keptLine = trapLine(0); var changedLine = trapLine(2);");
+        game.Traps[2] = game.Traps[2] with { BaitId = Carrot };
+        page.Hud(HudView.Ready(game.World, CarrotBook(), game.FloorCost, isRebait: true, "J"));
+
+        // One trap's change must not cost the web view a redraw of every row.
+        Assert.True(page.Is("trapLine(0) === keptLine"));
+        Assert.False(page.Is("trapLine(2) === changedLine"));
+        Assert.Equal("Carrot10 left", page.Text("trapLine(2).textContent"));
+    }
+
+    [Fact]
+    public void A_poll_with_nothing_new_keeps_every_row_line()
+    {
+        var page = Panel(Home(), isRebait: true);
+
+        page.Run("var lines = [0, 1, 2, 3, 4].map(trapLine);");
+        page.Poll();
+        page.Poll();
+
+        Assert.True(page.Is("[0, 1, 2, 3, 4].every(function (i) { return trapLine(i) === lines[i]; })"));
+    }
+
+    [Fact]
+    public void A_change_of_language_redraws_every_row_line_in_the_new_words_and_names()
+    {
+        var game = Home();
+        var page = Panel(game, isRebait: true);
+
+        page.Catalog(CatalogView.Write(game.World.Catalog).Replace("\"Rabbit\"", "\"Hare\""));
+        page.Run("window.__sltraphubWords = { hLeft: '{0} to go' }");
+        page.Poll();
+
+        Assert.Contains("Hare", page.Text("trapLine(0).textContent"));
+        Assert.Contains("1 to go", page.Text("trapLine(0).textContent"));
+        Assert.Contains("10 to go", page.Text("trapLine(2).textContent"));
+    }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
@@ -17,7 +18,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.4.0";
+    private const string Version = "0.4.1";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
@@ -90,6 +91,11 @@ public sealed class Plugin : BasePlugin
         TrapTicker.Session = session;
         TrapTicker.Log = log.Write;
         AddComponent<TrapTicker>();
+
+        // Compiles the mod's own views and presses on a worker thread while the game starts, so the first refresh after
+        // a save loads does not pay for it in one frame. Pure .NET only; it never touches the game, and a failure here
+        // only means that code is compiled when first used, as before.
+        Task.Run(() => Warmup.Run()).ContinueWith(task => _ = task.Exception, TaskContinuationOptions.OnlyOnFaulted);
     }
 
     private ConfigEntry<string> BindSound(string key, string englishTrap, string chineseTrap) =>

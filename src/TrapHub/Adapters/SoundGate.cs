@@ -24,20 +24,53 @@ internal static class SoundGate
     private static readonly List<(EventInstance Instance, float StopAt)> Chiming = new();
     private static IReadOnlyDictionary<SoundGroup, SoundMode> _modes = new Dictionary<SoundGroup, SoundMode>();
     private static Action<string> _log = _ => { };
+    private static Harmony? _harmony;
     private static bool _hasReportedFailure;
     private static float _now;
 
+    // These hooks run on every sound the game makes, so they are put in only once a setting needs them, and each one
+    // returns at once while no setting does.
+    private static bool _isAnyMuted;
+    private static bool _isAnyChanged;
+    private static bool _areMuteHooksIn;
+    private static bool _isStartHookIn;
+
+    /// <summary>Hooks nothing yet: <see cref="Use"/> hooks what the chosen modes need, so with every sound Normal no sound pays for a hook.</summary>
     public static void Apply(Harmony harmony, Action<string> log)
     {
         _log = log;
-
-        Hook(harmony, typeof(FmodManager), "PlayEnv3dAction", prefix: nameof(SkipPlayIfMuted));
-        Hook(harmony, typeof(FmodManager), "PlayBattle3dAction", prefix: nameof(SkipPlayIfMuted));
-        Hook(harmony, typeof(EventDescription), nameof(EventDescription.createInstance), postfix: nameof(SilenceIfMuted));
-        Hook(harmony, typeof(EventInstance), nameof(EventInstance.start), prefix: nameof(SkipStartIfMuted));
+        _harmony = harmony;
     }
 
-    public static void Use(IReadOnlyDictionary<SoundGroup, SoundMode> modes) => _modes = modes;
+    /// <summary>Called on the main thread at start and after each settings change.</summary>
+    public static void Use(IReadOnlyDictionary<SoundGroup, SoundMode> modes)
+    {
+        _modes = modes;
+        _isAnyMuted = false;
+        _isAnyChanged = false;
+
+        foreach (var mode in modes.Values)
+        {
+            _isAnyMuted |= mode == SoundMode.Muted;
+            _isAnyChanged |= mode != SoundMode.Normal;
+        }
+
+        if (_harmony == null) return;
+
+        if (_isAnyMuted && !_areMuteHooksIn)
+        {
+            _areMuteHooksIn = true;
+            Hook(_harmony, typeof(FmodManager), "PlayEnv3dAction", prefix: nameof(SkipPlayIfMuted));
+            Hook(_harmony, typeof(FmodManager), "PlayBattle3dAction", prefix: nameof(SkipPlayIfMuted));
+            Hook(_harmony, typeof(EventDescription), nameof(EventDescription.createInstance), postfix: nameof(SilenceIfMuted));
+        }
+
+        if (_isAnyChanged && !_isStartHookIn)
+        {
+            _isStartHookIn = true;
+            Hook(_harmony, typeof(EventInstance), nameof(EventInstance.start), prefix: nameof(SkipStartIfMuted));
+        }
+    }
 
     /// <summary>Called once a frame: stops each chime-once sound whose few seconds are up.</summary>
     public static void Tick(float now)
@@ -83,6 +116,8 @@ internal static class SoundGate
     /// <summary>The first argument of both FmodManager targets is the event path. False skips the sound.</summary>
     private static bool SkipPlayIfMuted(string __0)
     {
+        if (!_isAnyMuted) return true;
+
         try
         {
             return Sounds.ModeOf(__0, _modes) != SoundMode.Muted;
@@ -97,6 +132,8 @@ internal static class SoundGate
 
     private static void SilenceIfMuted(ref EventInstance __0)
     {
+        if (!_isAnyMuted) return;
+
         try
         {
             if (Sounds.ModeOf(PathOf(__0), _modes) == SoundMode.Muted) __0.setVolume(0f);
@@ -110,6 +147,8 @@ internal static class SoundGate
     /// <summary>A muted sound is skipped and reported as started; a chime-once sound starts and is stopped by Tick.</summary>
     private static bool SkipStartIfMuted(ref EventInstance __instance, ref RESULT __result)
     {
+        if (!_isAnyChanged) return true;
+
         try
         {
             switch (Sounds.ModeOf(PathOf(__instance), _modes))

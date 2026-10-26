@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+- Fixed a short freeze the first time Trap Hub read your traps after a save loaded. The trap list now loads a little at a time over the first moments of play.
+- For those first moments, the Trap Hub window says the trap list is still loading.
+- The game runs more smoothly with Trap Hub installed: the Trap Hub window and the HUD's trap list are now redrawn only when something in them has changed, and only the lines that changed.
+- With every catch sound set to Normal, Trap Hub no longer adds any work to the sounds the game plays.
+
 ## 0.4.0
 
 - The game's own Home Traps list in the HUD gets a **Check traps** button and a **Re-bait** box, beside the list's title like the plants list's Tend Garden button and Replant box.

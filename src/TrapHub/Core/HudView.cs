@@ -94,7 +94,7 @@ public static class HudView
             json.WriteEndObject();
         }
 
-        return Encoding.UTF8.GetString(stream.ToArray());
+        return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
     }
 
     /// <summary>One row's second line: the bait in it or the bait it gets next (0 for none left), its catch, and its wear.</summary>
