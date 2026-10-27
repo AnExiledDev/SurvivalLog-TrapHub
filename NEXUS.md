@@ -17,6 +17,7 @@ Every trap at home in one window: what each one holds, what bait it gets next, h
 [*][b]Allowed bait[/b]: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow every bait in your presets, or every universal bait you own, in one press. Each bait shows what it attracts, which traps take it and which presets use it.[/*]
 [*][b]Catch odds[/b]: each trap shows its likely catches for its bait, by the game's own rates, room and talents included.[/*]
 [*][b]Catch sounds[/b]: each trap sound can play as normal, chime once, or stay muted. When Quiet Traps is installed, it handles the sounds instead.[/*]
+[*][b]UI size[/b]: with Exiled's Toolkit 0.10.0 or newer, its UI size setting draws the window bigger or smaller, as far as it still fits on the screen.[/*]
 [/list]
 Presets and allowed bait are kept in [font=Courier New]BepInEx\config\trap-hub.json[/font], shared by every save. Trap Hub adds nothing to your save and does not edit game files. You can remove it at any time.
 
@@ -34,7 +35,7 @@ None known.
 [list]
 [*]Survival Log 1.1.19611. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
-[*]Optional: [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. Without it, they take effect at the next game start.[/*]
+[*]Optional: [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. With 0.10.0 or newer, its UI size setting also sizes the window. Without it, settings take effect at the next game start.[/*]
 [/list]
 
 [size=5]Installation[/size]
@@ -77,6 +78,7 @@ Open source under MIT: [url=https://github.com/AnExiledDev/SurvivalLog-TrapHub]g
 [*][b]允许的诱饵[/b]：Trap Hub 只会使用你允许的诱饵。所有诱饵默认都是禁止的。可一键允许方案中的全部诱饵，或你拥有的全部广谱诱饵。每种诱饵都会显示吸引的猎物、适用的陷阱，以及使用它的方案。[/*]
 [*][b]捕获概率[/b]：按游戏自身的概率显示每个陷阱可能捕到的猎物，已计入房间和天赋加成。[/*]
 [*][b]捕获声音[/b]：每种陷阱声音可以正常播放、只响一次或静音。安装了 Quiet Traps 时，由它来处理声音。[/*]
+[*][b]界面大小[/b]：安装 Exiled's Toolkit 0.10.0 或更新版本后，可以用它的界面大小设置放大或缩小窗口，最大放到窗口仍能完整显示在屏幕上为止。[/*]
 [/list]
 诱饵方案和允许的诱饵保存在 [font=Courier New]BepInEx\config\trap-hub.json[/font]，所有存档共用。Trap Hub 不会向存档添加任何内容，也不会修改游戏文件，可以随时移除。
 
@@ -91,7 +93,7 @@ Trap Hub 包含 Trapline 的功能，两者请只装一个。安装前如已装�
 [list]
 [*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
-[*]可选：[url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 或更新版本。安装后，在 Mod Manager 的模组界面修改的设置无需重启游戏即可生效；未安装时，在下次启动游戏时生效。[/*]
+[*]可选：[url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.4.0 或更新版本。安装后，在 Mod Manager 的模组界面修改的设置无需重启游戏即可生效，0.10.0 或更新版本还能用它的界面大小设置调整窗口的大小；未安装时，在下次启动游戏时生效。[/*]
 [/list]
 
 [size=5]安装[/size]

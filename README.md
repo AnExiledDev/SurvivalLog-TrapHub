@@ -17,6 +17,7 @@ Press `J` to check every trap: collect every catch, then bait every empty trap. 
 - **Allowed bait**: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow baits one at a time, or every bait the filter shows. Quick picks allow every bait in your presets, or every universal bait you own, in one press. Each bait shows what it attracts, which traps take it and which presets use it.
 - **Catch odds**: each trap shows its likely catches for the bait it holds or would get, by the game's own rates, room and talents included.
 - **Catch sounds**: the sound a trap plays while it holds a catch can play as normal, chime once, or stay muted, for each trap sound. When Quiet Traps is installed, it handles the sounds instead.
+- **UI size**: with Exiled's Toolkit 0.10.0 or newer, its UI size setting (`UiScale`) draws the window and its pop-up messages bigger or smaller, as far as the window still fits on the screen. The HUD button and what Trap Hub adds to the game's trap list keep the game's size.
 
 Presets and allowed bait are kept in `BepInEx\config\trap-hub.json`, shared by every save. Trap Hub adds nothing to your save and does not edit game files. You can remove it at any time.
 
@@ -26,7 +27,7 @@ Trap Hub does what Trapline does. Use one or the other, not both.
 
 - Survival Log 1.1.19611. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
-- Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. Without it, they take effect at the next game start. With 0.6.0 or newer, the HUD's tool buttons are also laid out four high, in columns, when there are more than four.
+- Optional: [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.4.0 or newer. With it, settings changed on the Mod Manager's Mods screen take effect without restarting the game. Without it, they take effect at the next game start. With 0.6.0 or newer, the HUD's tool buttons are also laid out four high, in columns, when there are more than four. With 0.10.0 or newer, its UI size setting also sizes the window.
 
 ## Install
 
@@ -49,7 +50,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the f
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.4.2 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
+Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.4.3 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
 
 ## Known issues
 

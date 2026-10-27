@@ -321,4 +321,64 @@ public class PageScriptTests
 
         public int GetHashCode(PageCommand obj) => 0;
     }
+
+    // ===== UI size (Exiled's Toolkit) =====
+
+    /// <summary>A stand-in for the Toolkit's ExiledUi that records what each mod hands it.</summary>
+    private const string FakeUi = "var handed = []; window.ExiledUi = { size: function (el, options) { handed.push({ el: el, options: options }); } }";
+
+    private static void OpenWithToolkit(PageScript page)
+    {
+        var game = Home();
+
+        page.Run(FakeUi);
+        page.Catalog(CatalogView.Write(game.World.Catalog));
+        page.Open(TrapView.Ready(game.World, TwoPresets(), Settings));
+    }
+
+    /// <summary>
+    /// The mask fills the screen at any zoom, so a window measured by the mask would never be shrunk to fit; the window
+    /// itself is what must fit. The notice is never shrunk. Each is handed once, however often the window opens.
+    /// </summary>
+    [Fact]
+    public void The_window_is_what_must_fit_the_screen_and_the_notice_is_never_shrunk()
+    {
+        var page = new PageScript();
+
+        OpenWithToolkit(page);
+        page.Run("window.__sltraphub.close()");
+        page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
+
+        Assert.Equal("2", page.Text("handed.length"));
+        Assert.Equal("th-root", page.Text("handed[0].el.id"));
+        Assert.True(page.Is("handed[0].options.fit === document.querySelector('.th-win')"));
+        Assert.Equal("th-toast", page.Text("handed[1].el.id"));
+        Assert.True(page.Is("handed[1].options.fit === false"));
+    }
+
+    /// <summary>The Toolkit drops a window taken out of its page, so the window drawn again in its place must be handed again.</summary>
+    [Fact]
+    public void A_window_drawn_again_after_the_page_lost_it_is_handed_again()
+    {
+        var page = new PageScript();
+
+        OpenWithToolkit(page);
+        page.Run("document.getElementById('th-root').remove(); document.getElementById('th-toast').remove()");
+        page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
+
+        Assert.Equal("4", page.Text("handed.length"));
+        Assert.True(page.Is("handed[2].el !== handed[0].el && handed[2].el === document.getElementById('th-root')"));
+        Assert.True(page.Is("handed[2].options.fit === document.querySelector('.th-win')"));
+    }
+
+    /// <summary>The Toolkit's script can load after this one; the window waits in the list it reads when it starts.</summary>
+    [Fact]
+    public void Before_the_toolkit_has_loaded_the_window_waits_for_it()
+    {
+        var page = Opened();
+
+        Assert.Equal("2", page.Text("window.__exiledUiWait.length"));
+        Assert.Equal("th-root", page.Text("window.__exiledUiWait[0][0].id"));
+        Assert.True(page.Is("window.__exiledUiWait[0][1].fit === document.querySelector('.th-win')"));
+    }
 }
