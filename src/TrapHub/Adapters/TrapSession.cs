@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ExiledToolkit;
 using GameCore.HotUpdate.ReduxUI;
 using TrapHub.Core;
 using UnityEngine;
@@ -63,6 +64,9 @@ internal sealed class TrapSession
     }
 
     private static bool IsChinese => GameLanguage.IsChinese();
+
+    /// <summary>A result line, in the window while it is open and as a toast otherwise; a failure shows as an error.</summary>
+    private void Status(string message) => _page.Status(message, _isOpen, message == Texts.Failed.Pick(IsChinese) ? ToastKind.Error : ToastKind.Info);
 
     /// <summary>Called on the main thread at start and after each settings change; the page hears the key at the next refresh.</summary>
     public void UseControls(KeyCode panelKey, bool isPanelShifted, KeyCode checkKey)
@@ -156,7 +160,7 @@ internal sealed class TrapSession
         catch (Exception ex)
         {
             _log($"page command {command} failed: {ex}");
-            _page.Status(Texts.Failed.Pick(IsChinese));
+            Status(Texts.Failed.Pick(IsChinese));
         }
     }
 
@@ -269,7 +273,7 @@ internal sealed class TrapSession
         }
 
         _log(message);
-        _page.Status(message);
+        Status(message);
         Redraw();
     }
 
@@ -277,7 +281,7 @@ internal sealed class TrapSession
     {
         if (_isSoundsElsewhere)
         {
-            _page.Status(Texts.SoundsElsewhere.Pick(IsChinese));
+            Status(Texts.SoundsElsewhere.Pick(IsChinese));
 
             return;
         }
@@ -288,7 +292,7 @@ internal sealed class TrapSession
         _settings = null;
         _view.Forget();
         SoundGate.Use(_sounds);
-        _page.Status(Texts.SoundSet.Say(IsChinese, Sounds.GroupName(group).Pick(IsChinese), Sounds.ModeLabel(mode).Pick(IsChinese)));
+        Status(Texts.SoundSet.Say(IsChinese, Sounds.GroupName(group).Pick(IsChinese), Sounds.ModeLabel(mode).Pick(IsChinese)));
         Redraw();
     }
 
@@ -388,7 +392,7 @@ internal sealed class TrapSession
 
         if (read is TrapRead.NoGame)
         {
-            _page.Status(Texts.NoGame.Pick(IsChinese));
+            Status(Texts.NoGame.Pick(IsChinese));
 
             return;
         }
@@ -480,7 +484,7 @@ internal sealed class TrapSession
         var message = TrapMessages.Describe(outcome, IsChinese, isAuto: true);
 
         _log("auto: " + message);
-        _page.Status(message);
+        Status(message);
 
         return true;
     }
@@ -532,7 +536,7 @@ internal sealed class TrapSession
             _log($"{name} failed: {ex}");
         }
 
-        _page.Status(message);
+        Status(message);
         Refresh(Time.unscaledTime);
 
         return outcome;

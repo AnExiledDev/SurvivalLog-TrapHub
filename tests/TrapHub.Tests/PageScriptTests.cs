@@ -338,10 +338,10 @@ public class PageScriptTests
 
     /// <summary>
     /// The mask fills the screen at any zoom, so a window measured by the mask would never be shrunk to fit; the window
-    /// itself is what must fit. The notice is never shrunk. Each is handed once, however often the window opens.
+    /// itself is what must fit. It is handed once, however often the window opens.
     /// </summary>
     [Fact]
-    public void The_window_is_what_must_fit_the_screen_and_the_notice_is_never_shrunk()
+    public void The_window_is_what_must_fit_the_screen()
     {
         var page = new PageScript();
 
@@ -349,12 +349,22 @@ public class PageScriptTests
         page.Run("window.__sltraphub.close()");
         page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
 
-        Assert.Equal("2", page.Text("handed.length"));
-        Assert.Equal("2", page.Text("handed.filter(function (h) { return h.options.mod === 'TrapHub'; }).length"));
+        Assert.Equal("1", page.Text("handed.length"));
+        Assert.Equal("TrapHub", page.Text("handed[0].options.mod"));
         Assert.Equal("th-root", page.Text("handed[0].el.id"));
         Assert.True(page.Is("handed[0].options.fit === document.querySelector('.th-win')"));
-        Assert.Equal("th-toast", page.Text("handed[1].el.id"));
-        Assert.True(page.Is("handed[1].options.fit === false"));
+    }
+
+    /// <summary>With the window closed a result line is the plugin's Toolkit toast, so the page draws no box of its own.</summary>
+    [Fact]
+    public void A_result_with_the_window_closed_draws_nothing_on_the_page()
+    {
+        var page = new PageScript();
+
+        page.Run("window.__sltraphub.status('Rebaited 3 traps')");
+
+        Assert.False(page.Is("document.getElementById('th-toast')"));
+        Assert.False(page.Is("document.body.textContent.indexOf('Rebaited 3 traps') >= 0"));
     }
 
     /// <summary>The Toolkit drops a window taken out of its page, so the window drawn again in its place must be handed again.</summary>
@@ -364,12 +374,12 @@ public class PageScriptTests
         var page = new PageScript();
 
         OpenWithToolkit(page);
-        page.Run("document.getElementById('th-root').remove(); document.getElementById('th-toast').remove()");
+        page.Run("document.getElementById('th-root').remove()");
         page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
 
-        Assert.Equal("4", page.Text("handed.length"));
-        Assert.True(page.Is("handed[2].el !== handed[0].el && handed[2].el === document.getElementById('th-root')"));
-        Assert.True(page.Is("handed[2].options.fit === document.querySelector('.th-win')"));
+        Assert.Equal("2", page.Text("handed.length"));
+        Assert.True(page.Is("handed[1].el !== handed[0].el && handed[1].el === document.getElementById('th-root')"));
+        Assert.True(page.Is("handed[1].options.fit === document.querySelector('.th-win')"));
     }
 
     /// <summary>The Toolkit's script can load after this one; the window waits in the list it reads when it starts.</summary>
@@ -378,7 +388,7 @@ public class PageScriptTests
     {
         var page = Opened();
 
-        Assert.Equal("2", page.Text("window.__exiledUiWait.length"));
+        Assert.Equal("1", page.Text("window.__exiledUiWait.length"));
         Assert.Equal("th-root", page.Text("window.__exiledUiWait[0][0].id"));
         Assert.True(page.Is("window.__exiledUiWait[0][1].fit === document.querySelector('.th-win')"));
     }

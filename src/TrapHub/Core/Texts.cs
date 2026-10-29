@@ -57,6 +57,9 @@ public static class Texts
     public static readonly Phrase CheckPop = new("Check x{0}", "巡查 \u00d7{0}");
     public static readonly Phrase Dismantling = new("Dismantling {0}.", "正在拆除{0}。");
     public static readonly Phrase Refused = new("The game would not do that for {0}.", "游戏拒绝了对{0}的操作。");
+    /// <summary>Who a toast is from, on its first line.</summary>
+    public static readonly Phrase Source = new("Trap Hub", "陷阱中心");
+
     public static readonly Phrase Failed = new("Trap Hub failed, see " + Log + ".", "Trap Hub 出错，详见 " + Log + "。");
 
     public static readonly Phrase PresetSaved = new("Preset {0} saved.", "预设「{0}」已保存。");

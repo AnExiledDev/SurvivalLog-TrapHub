@@ -11,7 +11,6 @@
   var DOCK_ORDER = '10';
   var HUD_STYLE_ID = 'th-hud-style';
   var BUSY_TIMEOUT_MS = 5000;
-  var TOAST_MS = 3500;
   var MAX_ROWS = 240;
   var MAX_ADD = 30;
   var MAX_KEEP = 99;
@@ -96,7 +95,6 @@
   var allowedSet = {};
   var presetUses = {};
   var ui = null;
-  var toastTimer = 0;
   var isBusy = false;
   var busyTimer = 0;
   var hudVersion = 0;
@@ -367,8 +365,7 @@
     '.th-note{font-size:12px;color:var(--t3);padding:4px 2px 8px}',
     '.th-banner{padding:8px 12px;margin:6px 0;border-radius:3px;border:1px solid rgba(255,167,38,.55);background:rgba(255,167,38,.10);color:#ffcc80;font-size:13px}',
     '.th-lockmsg{padding:12px 16px;border-radius:3px;border:1px solid rgba(255,200,58,.6);background:rgba(255,200,58,.10);color:var(--ac);font-size:15px}',
-    '.th-grow{flex:1;min-width:0}.th-dim{color:var(--t3);font-size:12px}.th-red{color:var(--rd)}.th-green{color:var(--gr)}.th-or{color:var(--or)}',
-    '#th-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:2147483001;pointer-events:none;display:none;max-width:640px;text-align:center;padding:10px 18px;border-radius:4px;border:1px solid rgba(255,200,58,.7);background:linear-gradient(180deg,#3a3129,#241e18);color:#f0e8d8;font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:14px;box-shadow:0 6px 20px rgba(0,0,0,.6)}'
+    '.th-grow{flex:1;min-width:0}.th-dim{color:var(--t3);font-size:12px}.th-red{color:var(--rd)}.th-green{color:var(--gr)}.th-or{color:var(--or)}'
   ].join('\n');
 
   function build() {
@@ -387,22 +384,18 @@
     var status = el('div', 'th-status');
     var keys = el('div');
     var esc = el('div');
-    var toast = el('div');
 
     root.id = 'th-root';
-    toast.id = 'th-toast';
     title.appendChild(sum);
     put(head, put(el('div', 'th-logo'), cage(document)), title, tabs, plainButton('th-x', '\u00d7', 'close', null, true));
     put(foot, status, keys, esc);
     put(win, head, body, foot);
     root.appendChild(win);
     document.body.appendChild(root);
-    document.body.appendChild(toast);
 
     // Drawn at the player's UI size (Exiled's Toolkit). The full-screen mask always fills the screen, so the window on
-    // it is what must fit; the short notice is never shrunk.
+    // it is what must fit.
     uiSize(root, { fit: win });
-    uiSize(toast, { fit: false });
 
     root.addEventListener('click', onClick);
     root.addEventListener('input', onInput);
@@ -418,7 +411,7 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sum: sum, tabs: tabs, body: body, status: status, keys: keys, esc: esc, toast: toast };
+    ui = { root: root, sum: sum, tabs: tabs, body: body, status: status, keys: keys, esc: esc };
   }
 
   // Hands a panel to Exiled's Toolkit to be drawn at the player's UI size. Before the Toolkit's script has loaded it
@@ -1630,7 +1623,6 @@
     state.isOpen = true;
     state.isTyping = false;
     ui.status.textContent = '';
-    ui.toast.style.display = 'none';
     ui.root.style.display = 'flex';
     render();
   }
@@ -1655,23 +1647,8 @@
     build();
     clearBusy();
 
-    if (state.isOpen) {
-      ui.status.textContent = text;
-
-      return;
-    }
-
-    // An empty status only clears the line; as a toast it would be an empty box.
-    if (!text) {
-      ui.toast.style.display = 'none';
-
-      return;
-    }
-
-    ui.toast.textContent = text;
-    ui.toast.style.display = 'block';
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { ui.toast.style.display = 'none'; }, TOAST_MS);
+    // With the window closed the plugin shows the line as an Exiled's Toolkit toast instead.
+    if (state.isOpen) ui.status.textContent = text;
   }
 
   // Whether a game with a home is loaded, and the key that opens the window ('' when none): the HUD button is only

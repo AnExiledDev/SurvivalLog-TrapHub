@@ -13,19 +13,17 @@ using UnityEngine;
 namespace TrapHub;
 
 [BepInPlugin(Guid, "Trap Hub", Version)]
-[BepInDependency(OptionalLive.ToolkitGuid, BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency(OptionalLive.ToolkitGuid, OptionalLive.ToolkitVersion)]
 [BepInDependency(QuietTrapsGuid, BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.5.0";
+    private const string Version = "0.5.1";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
     public override void Load()
     {
-        if (!OptionalLive.IsToolkitInstalled) Log.LogInfo(OptionalLive.MissingNote);
-
         OptionalUiSize.Bind(Config);
 
         var panelKey = Config.Bind("General", "PanelKey", KeyCode.J,
