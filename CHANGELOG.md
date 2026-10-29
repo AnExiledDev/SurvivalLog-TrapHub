@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2
+
+- Fixed: on Survival Log 1.1.20151, typing Trap Hub's keys in the item search no longer opens the Trap Hub window or checks your traps.
+- Made for Survival Log 1.1.20151.
+
 ## 0.5.1
 
 - With the window closed, Trap Hub's messages now show as Exiled's Toolkit toasts. Those toasts also go to the Notifications history.

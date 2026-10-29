@@ -27,6 +27,9 @@ internal static class InputGate
 
     public static bool IsShiftHeld() => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
+    /// <summary>The game is taking typed text in one of its own menus, such as the item search, so letter keys are words, not hotkeys.</summary>
+    public static bool IsGameTyping { get; private set; }
+
     public static void PanelOpened() => _isPanelOpen = true;
 
     /// <summary>Keeps hotkeys blocked through the next frame so the key that closed the panel (Esc) is not seen by the game too.</summary>
@@ -52,9 +55,14 @@ internal static class InputGate
         }
     }
 
-    /// <summary>Runs before the game's hotkeys every frame, so it asks Unity for the frame only in the frame or two after a close.</summary>
-    private static bool SkipWhileBlocked()
+    /// <summary>
+    /// Runs before the game's hotkeys every frame, so it asks Unity for the frame only in the frame or two after a close.
+    /// It also notes whether the game is taking typed text, which is a field read and no call.
+    /// </summary>
+    private static bool SkipWhileBlocked(HotKeyManager __instance)
     {
+        IsGameTyping = __instance != null && __instance._isTextInputActive;
+
         if (_isPanelOpen) return false;
         if (_blockedThroughFrame < 0) return true;
         if (Time.frameCount <= _blockedThroughFrame) return false;

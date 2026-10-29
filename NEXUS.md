@@ -33,7 +33,7 @@ None known.
 
 [size=5]Requirements[/size]
 [list]
-[*]Survival Log 1.1.19611. A game update can break it until the mod is updated.[/*]
+[*]Survival Log 1.1.20151. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.11.0 or newer. Trap Hub does not load without it. It shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting sizes the window.[/*]
 [/list]
@@ -91,7 +91,7 @@ Trap Hub 包含 Trapline 的功能，两者请只装一个。安装前如已装�
 
 [size=5]前置要求[/size]
 [list]
-[*]Survival Log 1.1.19611。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
+[*]Survival Log 1.1.20151。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.11.0 或更新版本。没有它本模组不会加载。窗口关闭时，它把 Trap Hub 的消息显示为弹出通知；它让在 Mod Manager 的模组界面修改的设置无需重启即可生效，它的界面大小设置还能调整窗口的大小。[/*]
 [/list]

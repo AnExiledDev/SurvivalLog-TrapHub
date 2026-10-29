@@ -122,8 +122,9 @@ internal sealed class TrapSession
         while (PageMessages.TryTake(out var command)) HandleSafely(command);
 
         // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
-        // The window's key wins when both keys are the same and Shift is not part of the window's key.
-        if (!_keyboard.IsClaimed)
+        // The window's key wins when both keys are the same and Shift is not part of the window's key. A key typed into
+        // one of the game's own text boxes (the item search) is text, not one of these keys.
+        if (!_keyboard.IsClaimed && !InputGate.IsGameTyping)
         {
             if (_panelKey != KeyCode.None && Input.GetKeyDown(_panelKey) && InputGate.IsShiftHeld() == _isPanelShifted)
             {
