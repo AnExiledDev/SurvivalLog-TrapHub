@@ -350,6 +350,7 @@ public class PageScriptTests
         page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
 
         Assert.Equal("2", page.Text("handed.length"));
+        Assert.Equal("2", page.Text("handed.filter(function (h) { return h.options.mod === 'TrapHub'; }).length"));
         Assert.Equal("th-root", page.Text("handed[0].el.id"));
         Assert.True(page.Is("handed[0].options.fit === document.querySelector('.th-win')"));
         Assert.Equal("th-toast", page.Text("handed[1].el.id"));

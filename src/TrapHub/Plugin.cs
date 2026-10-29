@@ -18,13 +18,15 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.4.3";
+    private const string Version = "0.5.0";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
     public override void Load()
     {
         if (!OptionalLive.IsToolkitInstalled) Log.LogInfo(OptionalLive.MissingNote);
+
+        OptionalUiSize.Bind(Config);
 
         var panelKey = Config.Bind("General", "PanelKey", KeyCode.J,
             "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true (Shift+J by default). None turns the key off; the trap button in the HUD's tool column still opens the window.\n" +
