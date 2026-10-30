@@ -1,14 +1,14 @@
 # Trap Hub
 
-Every trap at home in one window: what each one holds, what bait it gets next, how worn it is and what it is likely to catch. Check every trap with one key, re-bait from presets with fallbacks, and pick which bait the mod may use.
+Every trap at home in one window: what each one holds, what bait it gets next, how worn it is and what it is likely to catch. Check every trap with one press, re-bait from presets with fallbacks, and pick which bait the mod may use.
 
-Press `J` to check every trap: collect every catch, then bait every empty trap. Press `Shift+J`, or the trap button in the tool column on the left of the screen, to open the window. The button shows how many traps hold a catch to take or wait for bait.
+Press **Check traps** in the game's Home Traps list to check every trap: collect every catch, then bait every empty trap. Press the trap button in the tool column on the left of the screen to open the window. Both can have a key too (`CheckKey` and `PanelKey`), unbound by default. The button shows how many traps hold a catch to take or wait for bait.
 
 ## Features
 
 - **All traps at a glance**: every trap at home, grouped by room with your floor marked, with its state (armed, prey, no bait, halted), its bait, its store and how many catches it has left before it breaks.
 - **Find a trap fast**: show the traps that need you, the armed ones or all, and search by trap, room or prey. The side panel lists what waits (catches to collect, traps to bait, no bait left, about to break, halted); press a line to see those traps.
-- **Check all traps** (`J`): collects every catch, your floor first, nearest trap first, then baits every empty trap from its preset, the ones just emptied included. **This floor only** does the same for the floor you are on; **Collect only** and **Bait only** do one half. Each trap can also be handled on its own.
+- **Check all traps**: collects every catch, your floor first, nearest trap first, then baits every empty trap from its preset, the ones just emptied included. **This floor only** does the same for the floor you are on; **Collect only** and **Bait only** do one half. Each trap can also be handled on its own.
 - **In the game's own trap list**: the Home Traps list in the HUD gets a Check traps button, whose tip shows what the check will collect, bait and skip, a Re-bait traps button that baits every trap with no bait without collecting anything, whose tip shows the bait each room's traps get, and a Re-bait box that turns refilling emptied traps on or off. Each trap in the list shows its bait, its catch and the catches it has left, and a line on top counts what waits, with a link to the window.
 - **Bait presets**: an ordered list of baits, so when one runs out the next is used. Each step can keep a number back (keep at least 3 meat, say). If every step is out, the preset can fall back to any allowed universal bait.
 - **Per trap or per type**: each trap type has a default preset, and any trap can have its own. A trap's own preset is kept per save.
@@ -27,7 +27,7 @@ Trap Hub does what Trapline does. Use one or the other, not both.
 
 - Survival Log 1.1.20151. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
-- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.11.0 or newer. Trap Hub does not load without it. It shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, lays the HUD's tool buttons out four high, in columns, when there are more than four, and its UI size setting sizes the window.
+- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.12.0 or newer. Trap Hub does not load without it. It keeps Trap Hub's keys quiet while you type, shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, lays the HUD's tool buttons out four high, in columns, when there are more than four, and its UI size setting sizes the window.
 
 ## Install
 
@@ -44,7 +44,7 @@ Delete `TrapHub.dll` from the `BepInEx\plugins` folder. For a clean slate, also 
 
 ## Configuration
 
-Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the first time the game starts with the mod. The keys are `CheckKey` (J) and `PanelKey` with `PanelKeyShift` (Shift+J). `RebaitOnCheck` sets whether Check traps refills the traps it empties. The catch sounds can also be set in the window's Settings tab. See [CONFIG.md](CONFIG.md) for every setting.
+Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the first time the game starts with the mod. The keys are `CheckKey` and `PanelKey` with `PanelKeyShift`. Both keys are unbound by default, since the HUD buttons do the same; set them to use the keyboard. They do nothing while you type in a text box. `RebaitOnCheck` sets whether Check traps refills the traps it empties. The catch sounds can also be set in the window's Settings tab. See [CONFIG.md](CONFIG.md) for every setting.
 
 ## Troubleshooting
 

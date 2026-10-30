@@ -8,9 +8,9 @@ Bait presets, the allowed bait list and each trap's own preset are not in this f
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `PanelKey` | `J` | Opens and closes the Trap Hub window, pressed with Shift while `PanelKeyShift` is `true`. `None` turns the key off; the trap button in the tool column on the left of the screen still opens it. |
-| `PanelKeyShift` | `true` | When `true`, the window opens with Shift and `PanelKey` (Shift+J), and J alone checks traps. When `false`, `PanelKey` alone opens the window; if it is the same key as `CheckKey`, that key also checks traps. |
-| `CheckKey` | `J` | Checks every trap at once: collects every catch, then baits every empty trap from its bait preset. `None` turns it off. |
+| `PanelKey` | `None` | Opens and closes the Trap Hub window, pressed with Shift while `PanelKeyShift` is `true`. Unbound by default: the trap button in the tool column on the left of the screen opens the window. Set a key here to open it from the keyboard too. |
+| `PanelKeyShift` | `true` | When `true`, the window opens with Shift and `PanelKey`, so the same key alone can be `CheckKey`. When `false`, `PanelKey` alone opens the window; if it is the same key as `CheckKey`, that key opens the window instead of checking traps. |
+| `CheckKey` | `None` | Checks every trap at once: collects every catch, then baits every empty trap from its bait preset. Unbound by default: the Check traps button in the HUD's Home Traps list does the same. Set a key here to check traps from the keyboard too. |
 | `RebaitOnCheck` | `true` | When `true`, Check traps also baits every trap it empties, in the same trip. When `false`, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's Home Traps list sets this too. |
 
 ## Sounds

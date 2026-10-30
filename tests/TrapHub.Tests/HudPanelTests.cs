@@ -176,15 +176,15 @@ public class HudPanelTests
         Assert.Empty(game.Baited);
     }
 
-    private static PageScript Panel(FakeGame game, bool isRebait, string armedWords = "Deploying Defenses")
+    private static PageScript Panel(FakeGame game, bool isRebait, string armedWords = "Deploying Defenses", string checkKey = "J")
     {
         var page = new PageScript();
 
         page.Catalog(CatalogView.Write(game.World.Catalog));
         page.OpenHud();
         page.Run($"openTrapPanel([{string.Join(",", game.Traps.Select(t => t.Id))}], {JsText.Literal(armedWords)})");
-        page.Live(true, "J");
-        page.Hud(HudView.Ready(game.World, CarrotBook(), game.FloorCost, isRebait, "J"));
+        page.Live(true, checkKey);
+        page.Hud(HudView.Ready(game.World, CarrotBook(), game.FloorCost, isRebait, checkKey));
 
         return page;
     }
@@ -244,6 +244,24 @@ public class HudPanelTests
         Assert.Contains(".top-left-panel:has(.trap-toggle-row.is-expanded),.top-left-panel:has(.trap-panel:hover){z-index:102}", css);
         // The game's hover filter on the row makes it a stacking context, so the hovered panel itself is raised too.
         Assert.Contains(".trap-panel:hover{z-index:1}", css);
+    }
+
+    [Fact]
+    public void An_unbound_check_key_is_left_out_of_the_check_tip()
+    {
+        var page = Panel(Home(), isRebait: true, checkKey: "");
+
+        Assert.Equal("0", page.Text("hudPage().querySelector('.th-plan').querySelectorAll('.entry-tip-key').length"));
+        Assert.StartsWith("Check traps", page.Text("hudPage().querySelector('.th-plan').textContent"));
+        Assert.DoesNotContain("None", page.Text("hudPage().querySelector('.th-plan').textContent"));
+    }
+
+    [Fact]
+    public void A_bound_check_key_shows_in_the_check_tip()
+    {
+        var page = Panel(Home(), isRebait: true, checkKey: "J");
+
+        Assert.Equal("J", page.Text("hudPage().querySelector('.th-plan').querySelector('.entry-tip-key').textContent"));
     }
 
     [Fact]

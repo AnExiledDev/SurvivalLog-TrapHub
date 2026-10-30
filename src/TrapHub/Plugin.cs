@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.0";
+    private const string Version = "0.6.1";
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
 
@@ -26,15 +27,15 @@ public sealed class Plugin : BasePlugin
     {
         OptionalUiSize.Bind(Config);
 
-        var panelKey = Config.Bind("General", "PanelKey", KeyCode.J,
-            "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true (Shift+J by default). None turns the key off; the trap button in the HUD's tool column still opens the window.\n" +
-            "打开和关闭 Trap Hub 窗口的按键；PanelKeyShift 为 true 时需同时按住 Shift（默认 Shift+J）。设为 None 则停用该按键，HUD 工具栏中的陷阱按钮仍可打开窗口。");
+        var panelKey = Config.Bind("General", "PanelKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
+            "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true. Unbound by default: the trap button in the HUD's tool column opens the window. Set a key here to open it from the keyboard too.\n" +
+            "打开和关闭 Trap Hub 窗口的按键；PanelKeyShift 为 true 时需同时按住 Shift。默认不绑定：HUD 工具栏中的陷阱按钮可以打开窗口。在这里设置按键后，也可以用键盘打开。");
         var panelKeyShift = Config.Bind("General", "PanelKeyShift", true,
             "When true, the window opens with Shift and PanelKey together, so PanelKey alone is free for Check traps. Set it to false to open the window with PanelKey alone.\n" +
             "设为 true 时，需同时按住 Shift 和 PanelKey 才会打开窗口，单按 PanelKey 留给巡查陷阱。设为 false 则单按 PanelKey 即可打开窗口。");
-        var checkKey = Config.Bind("General", "CheckKey", KeyCode.J,
-            "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. J by default. None turns it off.\n" +
-            "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认 J。设为 None 则停用。");
+        var checkKey = Config.Bind("General", "CheckKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
+            "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. Unbound by default: the Check traps button in the HUD's trap panel does the same. Set a key here to check traps from the keyboard too.\n" +
+            "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认不绑定：HUD 陷阱面板中的巡查按钮可以做同样的事。在这里设置按键后，也可以用键盘巡查。");
         var rebaitOnCheck = Config.Bind("General", "RebaitOnCheck", true,
             "When true, Check traps also baits every trap it empties, in the same trip. When false, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's trap panel sets this too.\n" +
             "设为 true 时，巡查陷阱会在同一趟中为拾取后的陷阱补饵。设为 false 时，只为本来就空着的陷阱布饵。HUD 陷阱面板中巡查按钮旁的「布饵」勾选框也会修改此项。");

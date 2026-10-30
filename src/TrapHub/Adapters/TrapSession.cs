@@ -27,6 +27,9 @@ internal sealed class TrapSession
     private readonly Action<bool> _saveRebait;
     private readonly Action<string> _log;
     private readonly Dictionary<long, float> _retryAt = new();
+    private readonly Func<bool> _isPanelKeyDown;
+    private readonly Func<bool> _isCheckKeyDown;
+    private static readonly Func<bool> IsTypingAnywhere = () => ExiledToolkit.Typing.IsActive;
 
     private PresetBook? _book;
     private KeyCode _panelKey;
@@ -61,6 +64,8 @@ internal sealed class TrapSession
         _saveSound = saveSound;
         _saveRebait = saveRebait;
         _log = log;
+        _isPanelKeyDown = () => Input.GetKeyDown(_panelKey) && InputGate.IsShiftHeld() == _isPanelShifted;
+        _isCheckKeyDown = () => Input.GetKeyDown(_checkKey) && !InputGate.IsShiftHeld();
     }
 
     private static bool IsChinese => GameLanguage.IsChinese();
@@ -123,17 +128,17 @@ internal sealed class TrapSession
 
         // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
         // The window's key wins when both keys are the same and Shift is not part of the window's key. A key typed into
-        // one of the game's own text boxes (the item search) is text, not one of these keys.
+        // one of the game's own text boxes (the item search), or into any mod's page, is text, not one of these keys.
         if (!_keyboard.IsClaimed && !InputGate.IsGameTyping)
         {
-            if (_panelKey != KeyCode.None && Input.GetKeyDown(_panelKey) && InputGate.IsShiftHeld() == _isPanelShifted)
+            if (Hotkey.Fires(_panelKey != KeyCode.None, _isPanelKeyDown, IsTypingAnywhere))
             {
                 Toggle();
 
                 return;
             }
 
-            if (_checkKey != KeyCode.None && Input.GetKeyDown(_checkKey) && !InputGate.IsShiftHeld())
+            if (Hotkey.Fires(_checkKey != KeyCode.None, _isCheckKeyDown, IsTypingAnywhere))
             {
                 Check("check traps (key)", null);
 

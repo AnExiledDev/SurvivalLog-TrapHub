@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1
+
+- The window key and the Check traps key are now unbound by default; use the trap button and the Check traps button in the HUD, or set keys in the settings.
+- The window key and the Check traps key no longer fire while you type in a text box in any mod's window.
+- Exiled's Toolkit 0.12.0 or newer is now required.
+- Made for Survival Log 1.1.20151.
+
 ## 0.6.0
 
 - New: a Re-bait traps button beside the Check traps button in the HUD's Home Traps list. It puts bait in every trap that has none, without collecting any catches. Hover over it to see which bait goes into which room's traps.
