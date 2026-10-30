@@ -117,6 +117,65 @@ public class HudPanelTests
         Assert.Equal(2, hud.GetProperty("skipMore").GetInt32());
     }
 
+    [Fact]
+    public void Rebait_traps_baits_every_trap_that_can_take_bait_a_trap_holding_its_catch_included_and_collects_nothing()
+    {
+        var game = Home();
+
+        var outcome = TrapRun.RebaitAll(game, CarrotBook());
+
+        Assert.Empty(game.Taken);
+        Assert.Equal(new[] { (2L, Carrot), (3L, Carrot) }, game.Baited.OrderBy(b => b.TrapId));
+        Assert.Equal(new TrapOutcome.Baited(2, 1, 0), outcome);
+    }
+
+    [Fact]
+    public void The_rebait_tip_names_the_same_traps_and_bait_the_press_uses_whether_rebait_on_check_is_on_or_off()
+    {
+        foreach (var isRebait in new[] { true, false })
+        {
+            var hud = Hud(Home(), isRebait);
+            var fill = hud.GetProperty("fill").EnumerateArray().Single();
+
+            Assert.Equal(Carrot, fill.GetProperty("bait").GetInt32());
+            Assert.Equal("Pantry", fill.GetProperty("room").GetString());
+            Assert.Equal(2, fill.GetProperty("n").GetInt32());
+            Assert.Equal(2, hud.GetProperty("fillCount").GetInt32());
+            Assert.Equal(1, hud.GetProperty("fillNone").GetInt32());
+        }
+    }
+
+    [Fact]
+    public void Rebait_traps_follows_the_preset_order_and_does_not_promise_more_bait_than_there_is()
+    {
+        // Meat first, then carrots; no meat in hand and only two carrots for three empty cages.
+        var book = Book(new[] { Carrot, Meat }, Preset("p1", Step(Meat), Step(Carrot)));
+        var game = new FakeGame { Traps = { T(1), T(2), T(3) }, Stock = { Bag(1, Carrot, 2) } };
+
+        var plan = CheckPlan.RebaitAll(game.World, book);
+
+        Assert.Equal(new int?[] { Carrot, Carrot, null }, plan.Select(p => p.Choice?.ItemId));
+
+        var outcome = TrapRun.RebaitAll(game, book);
+
+        Assert.Equal(new[] { (1L, Carrot), (2L, Carrot) }, game.Baited);
+        Assert.Equal(new TrapOutcome.Baited(2, 1, 0), outcome);
+    }
+
+    [Fact]
+    public void With_every_trap_baited_rebait_traps_has_nothing_to_do()
+    {
+        var game = new FakeGame { Traps = { T(1, bait: Carrot), T(2, prey: Rabbit, bait: Carrot) }, Stock = { Bag(1, Carrot, 5) } };
+        var hud = Hud(game, isRebait: false);
+
+        Assert.Empty(CheckPlan.RebaitAll(game.World, CarrotBook()));
+        Assert.Equal(0, hud.GetProperty("fill").GetArrayLength());
+        Assert.Equal(0, hud.GetProperty("fillCount").GetInt32());
+        Assert.Equal(0, hud.GetProperty("fillNone").GetInt32());
+        Assert.Equal(new TrapOutcome.NothingToBait(), TrapRun.RebaitAll(game, CarrotBook()));
+        Assert.Empty(game.Baited);
+    }
+
     private static PageScript Panel(FakeGame game, bool isRebait, string armedWords = "Deploying Defenses")
     {
         var page = new PageScript();
@@ -135,7 +194,7 @@ public class HudPanelTests
     {
         var page = Panel(Home(), isRebait: true);
 
-        Assert.Equal("th-check-btn,th-rebait-chk,trap-toggle-chevron", page.Text("hudPage().querySelector('.trap-toggle-row').children.slice(1).map(function (n) { return n.classes.filter(function (c) { return c === 'th-check-btn' || c === 'th-rebait-chk' || c === 'trap-toggle-chevron'; })[0]; }).join(',')"));
+        Assert.Equal("th-check-btn,th-fill-btn,th-rebait-chk,trap-toggle-chevron", page.Text("hudPage().querySelector('.trap-toggle-row').children.slice(1).map(function (n) { return n.classes.filter(function (c) { return c === 'th-check-btn' || c === 'th-fill-btn' || c === 'th-rebait-chk' || c === 'trap-toggle-chevron'; })[0]; }).join(',')"));
         Assert.True(page.Is("hudPage().querySelector('.th-rebait-chk').querySelector('input').checked"));
 
         page.Click("hudPage().querySelector('.th-check-btn')");
@@ -151,6 +210,40 @@ public class HudPanelTests
         page.Click("hudPage().querySelector('.th-rebait-chk')");
 
         Assert.Empty(page.Sent);
+    }
+
+    [Fact]
+    public void The_rebait_button_sends_rebait_all_and_its_tip_lists_the_bait_it_will_put_in()
+    {
+        var page = Panel(Home(), isRebait: false);
+
+        page.Click("hudPage().querySelector('.th-fill-btn')");
+
+        Assert.Equal(new PageCommand[] { new PageCommand.RebaitAll() }, page.Sent);
+
+        var tip = page.Text("hudPage().querySelector('.th-fill-plan').textContent");
+
+        Assert.StartsWith("Re-bait traps", tip);
+        Assert.Contains("Bait with Carrot \u00b7 Pantry2", tip);
+        Assert.Contains("Traps getting bait now: 2. Catches stay in the traps.", tip);
+        Assert.Contains("Traps with no bait left to use: 1.", tip);
+        Assert.DoesNotContain("Collect", tip);
+
+        var idle = Panel(new FakeGame { Traps = { T(1, bait: Carrot) } }, isRebait: true);
+
+        Assert.Contains("Nothing to re-bait", idle.Text("hudPage().querySelector('.th-fill-plan').textContent"));
+    }
+
+    [Fact]
+    public void An_open_trap_list_or_a_hovered_trap_row_lifts_the_top_left_panel_above_the_tool_column()
+    {
+        var page = Panel(Home(), isRebait: true);
+        var css = page.Text("hudPage().getElementById('th-panel-style').textContent");
+
+        // The tool column (.vertical-tools) is at z-index 101; the game's top-left panel at 100.
+        Assert.Contains(".top-left-panel:has(.trap-toggle-row.is-expanded),.top-left-panel:has(.trap-panel:hover){z-index:102}", css);
+        // The game's hover filter on the row makes it a stacking context, so the hovered panel itself is raised too.
+        Assert.Contains(".trap-panel:hover{z-index:1}", css);
     }
 
     [Fact]

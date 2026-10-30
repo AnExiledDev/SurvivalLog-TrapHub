@@ -82,7 +82,9 @@
     keyNone: 'No key is set; use the trap button on the left of the screen.',
     presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', escClose: 'Esc to close',
     tip: 'Your traps: catches, bait and wear',
-    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, this floor first', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0}, {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0}, {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.'
+    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, this floor first', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0}, {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0}, {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.',
+    hRebaitAll: 'Re-bait traps', hFillFoot: 'Traps getting bait now: {0}. Catches stay in the traps.',
+    hFillIdle: 'Nothing to re-bait: every trap that takes bait has some.', hFillNone: 'Traps with no bait left to use: {0}.'
   };
 
   var state = {
@@ -1826,11 +1828,19 @@
   var GAME_ARMED_EN = 'deploying defenses';
   var JAWS_PATH = 'M1.5 11.2L4 9.8 6 12 8 10.4 10 12 12 9.8 14.5 11.2V12.6L8 14.2 1.5 12.6Z';
   var ARROW_PATH = 'M8 1.6V7.6M5.2 4.6L8 1.6 10.8 4.6';
+  var DROP_PATH = 'M8 1.6V7.6M5.2 4.6L8 7.6 10.8 4.6';
   var PANEL_CSS = [
     '.trap-panel .trap-popover{max-width:340px}',
     '.trap-panel .trap-item-row{flex-wrap:wrap}',
-    '.th-check-btn{margin-left:4px;position:relative}',
-    '.trap-toggle-row.is-expanded .th-check-btn .entry-tip{display:none}',
+    '.th-check-btn,.th-fill-btn{margin-left:4px;position:relative}',
+    '.trap-toggle-row.is-expanded .th-check-btn .entry-tip,.trap-toggle-row.is-expanded .th-fill-btn .entry-tip{display:none}',
+    // The HUD's top-left panel is a stacking context at z-index 100 and the tool column (.vertical-tools) sits at 101,
+    // so nothing inside the panel can draw over the column whatever its own z-index. While the trap list is open or
+    // the trap row is under the mouse, the panel is lifted just above the column.
+    '.top-left-panel:has(.trap-toggle-row.is-expanded),.top-left-panel:has(.trap-panel:hover){z-index:102}',
+    // A hovered toggle row gets a brightness filter, which makes it a stacking context of its own, so a tip inside it
+    // would draw under any positioned element after the trap panel. A z-index on the hovered panel puts it on top.
+    '.trap-panel:hover{z-index:1}',
     '.th-sub{flex-basis:100%;display:flex;align-items:center;gap:5px;padding-left:20px;font-size:9.5px;color:rgba(255,255,255,0.55);white-space:nowrap;text-shadow:1px 1px 2px black}',
     '.th-sub img,.th-strip img{width:11px;height:11px;object-fit:contain}',
     '.th-sub .th-sep{color:rgba(255,255,255,0.25)}',
@@ -1945,27 +1955,34 @@
   // built once and only their tip and tick change, so a tip being read does not flicker away.
   function placeCheckControls(doc, row) {
     var button = row.querySelector('.th-check-btn');
+    var fill = row.querySelector('.th-fill-btn');
     var box = row.querySelector('.th-rebait-chk');
 
-    if (!button || !box) {
+    if (!button || !fill || !box) {
       if (button) button.remove();
+      if (fill) fill.remove();
       if (box) box.remove();
 
-      button = checkButton(doc);
+      button = trapButton(doc, 'th-check-btn', ARROW_PATH, 'checkall');
+      fill = trapButton(doc, 'th-fill-btn', DROP_PATH, 'rebaitall');
       box = rebaitBox(doc);
 
       var chevron = row.querySelector('.trap-toggle-chevron');
 
       row.insertBefore(button, chevron);
+      row.insertBefore(fill, chevron);
       row.insertBefore(box, chevron);
     }
 
     if (button.getAttribute('data-version') !== String(hudSeq)) {
       var old = button.querySelector('.entry-tip');
+      var oldFill = fill.querySelector('.entry-tip');
 
       if (old) old.remove();
+      if (oldFill) oldFill.remove();
 
       button.appendChild(checkTip(doc));
+      fill.appendChild(fillTip(doc));
       button.setAttribute('data-version', String(hudSeq));
     }
 
@@ -1974,18 +1991,19 @@
     if (input.checked !== !!hudData.rebait) input.checked = !!hudData.rebait;
   }
 
-  function checkButton(doc) {
+  // Check traps (an arrow out of the jaws) and Re-bait traps (an arrow into them), built like the game's Tend Garden.
+  function trapButton(doc, className, arrowPath, action) {
     var node = doc.createElement('span');
     var svg = doc.createElementNS(SVG_NS, 'svg');
     var jaws = doc.createElementNS(SVG_NS, 'path');
     var arrow = doc.createElementNS(SVG_NS, 'path');
 
-    node.className = 'mature-patrol-btn has-entry-tip th-check-btn th-add';
+    node.className = 'mature-patrol-btn has-entry-tip ' + className + ' th-add';
     node.setAttribute('data-interactive', '');
     svg.setAttribute('viewBox', '0 0 16 16');
     svg.setAttribute('fill', 'currentColor');
     jaws.setAttribute('d', JAWS_PATH);
-    arrow.setAttribute('d', ARROW_PATH);
+    arrow.setAttribute('d', arrowPath);
     arrow.setAttribute('stroke', 'currentColor');
     arrow.setAttribute('stroke-width', '1.7');
     arrow.setAttribute('stroke-linecap', 'round');
@@ -1995,7 +2013,7 @@
     node.appendChild(svg);
     node.addEventListener('click', function (e) {
       e.stopPropagation();
-      sendAction('checkall');
+      sendAction(action);
     });
 
     return node;
@@ -2062,6 +2080,29 @@
     });
 
     if (d.skipMore > 0) tip.appendChild(make(doc, 'div', 'th-plan-foot th-warn', say('hSkipMore', d.skipMore)));
+
+    return tip;
+  }
+
+  // What Re-bait traps will do, from the same choices the press makes: the bait each room's traps get, and how many
+  // traps have none left. Catches are not collected.
+  function fillTip(doc) {
+    var tip = doc.createElement('div');
+    var title = doc.createElement('div');
+    var d = hudData;
+
+    tip.className = 'entry-tip tip-below th-plan th-fill-plan';
+    title.className = 'entry-tip-title';
+    title.textContent = say('hRebaitAll');
+    tip.appendChild(title);
+
+    var lines = (d.fill || []).map(function (b) { return planLine(doc, baitOf(b.bait), say('hBaitWith', baitOf(b.bait).name), b.room, b.n); });
+
+    if (lines.length) tip.appendChild(planList(doc, lines));
+
+    tip.appendChild(make(doc, 'div', 'th-plan-foot', d.fillCount > 0 ? say('hFillFoot', d.fillCount) : say('hFillIdle')));
+
+    if (d.fillNone > 0) tip.appendChild(make(doc, 'div', 'th-plan-foot th-warn', say('hFillNone', d.fillNone)));
 
     return tip;
   }

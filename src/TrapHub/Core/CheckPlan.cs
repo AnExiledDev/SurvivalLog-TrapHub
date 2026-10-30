@@ -28,7 +28,7 @@ public sealed record CheckPlan(IReadOnlyList<Trap> Take, IReadOnlyList<(Trap Tra
     {
         var take = TakeAllRoute.Plan(world.Traps, world.PlayerFloor, world.PlayerPosition, floorCost, onlyFloor);
         var next = TrapView.NextBait(world, book, trap => IsBaitWanted(trap, onlyFloor, isRefill));
-        var bait = TrapRun.FloorFirst(world).Where(trap => next.ContainsKey(trap.Id)).Select(trap => (trap, next[trap.Id])).ToList();
+        var bait = InOrder(world, next);
         var skipped = new List<(Trap, CheckSkip)>();
 
         foreach (var trap in TrapRun.FloorFirst(world))
@@ -48,11 +48,20 @@ public sealed record CheckPlan(IReadOnlyList<Trap> Take, IReadOnlyList<(Trap Tra
         return new CheckPlan(take, bait, skipped);
     }
 
+    /// <summary>
+    /// What Re-bait traps will do if pressed now (TrapRun.RebaitAll): every trap that can take bait, on every floor, a
+    /// trap still holding its catch included, with the bait it gets or null when none is left. Nothing is collected.
+    /// </summary>
+    public static IReadOnlyList<(Trap Trap, BaitChoice? Choice)> RebaitAll(TrapWorld world, PresetBook book) => InOrder(world, TrapView.NextBait(world, book));
+
     /// <summary>The traps Check traps baits, besides BaitPick.CanBait: on the floor asked for, and with Re-bait off only the empty ones.</summary>
     public static bool IsBaitWanted(Trap trap, int? onlyFloor, bool isRefill) => (onlyFloor == null || trap.Floor == onlyFloor) && (isRefill || trap.PreyId <= 0);
 
     /// <summary>Every trap the check walks to or baits.</summary>
     public IEnumerable<Trap> Touched() => Take.Concat(Bait.Where(pair => pair.Choice != null).Select(pair => pair.Trap)).GroupBy(trap => trap.Id).Select(group => group.First());
+
+    private static List<(Trap Trap, BaitChoice? Choice)> InOrder(TrapWorld world, IReadOnlyDictionary<long, BaitChoice?> next) =>
+        TrapRun.FloorFirst(world).Where(trap => next.ContainsKey(trap.Id)).Select(trap => (trap, next[trap.Id])).ToList();
 
     private static bool IsBreaking(Trap trap, TrapType type) =>
         !type.HasStore && type.AcceptedBait.Count > 0 && trap.PreyId > 0 && trap.BaitId == 0 && trap.Durability - type.CatchCost <= 0;

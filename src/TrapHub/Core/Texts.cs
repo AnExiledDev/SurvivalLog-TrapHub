@@ -237,5 +237,9 @@ public static class Texts
         ("hSkipBreaks", new("{0}, {1} breaks on its next catch, so it is emptied but not re-baited.", "{1}的{0}下次捕获就会损坏，只拾取不补饵。")),
         ("hSkipNoBait", new("{0}, {1} has no bait left, so it is skipped.", "{1}的{0}没有可用诱饵，将被跳过。")),
         ("hSkipMore", new("{0} more skipped.", "另有 {0} 个被跳过。")),
+        ("hRebaitAll", new("Re-bait traps", "陷阱补饵")),
+        ("hFillFoot", new("Traps getting bait now: {0}. Catches stay in the traps.", "现在布饵的陷阱：{0} 个。猎物留在陷阱里。")),
+        ("hFillIdle", new("Nothing to re-bait: every trap that takes bait has some.", "无需补饵：所有能放诱饵的陷阱都已有诱饵。")),
+        ("hFillNone", new("Traps with no bait left to use: {0}.", "没有可用诱饵的陷阱：{0} 个。")),
     };
 }

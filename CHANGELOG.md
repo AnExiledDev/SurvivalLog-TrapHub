@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- New: a Re-bait traps button beside the Check traps button in the HUD's Home Traps list. It puts bait in every trap that has none, without collecting any catches. Hover over it to see which bait goes into which room's traps.
+- Fixed: the Check traps tip and the open Home Traps list are no longer hidden behind the tool buttons on the left of the screen.
+- Made for Survival Log 1.1.20151.
+
 ## 0.5.2
 
 - Fixed: on Survival Log 1.1.20151, typing Trap Hub's keys in the item search no longer opens the Trap Hub window or checks your traps.

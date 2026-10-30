@@ -91,10 +91,33 @@ public static class HudView
 
             json.WriteEndArray();
             json.WriteNumber("skipMore", Math.Max(0, plan.Skipped.Count - NamedSkips));
+            WriteRebaitAll(json, world, isRebait ? plan.Bait : CheckPlan.RebaitAll(world, book));
             json.WriteEndObject();
         }
 
         return Encoding.UTF8.GetString(stream.GetBuffer(), 0, (int)stream.Length);
+    }
+
+    /// <summary>
+    /// The Re-bait traps button's tip: the bait each room's traps get, how many get bait, and how many have none left.
+    /// With Re-bait on, Check traps baits the same traps, so its plan is passed in rather than made again.
+    /// </summary>
+    private static void WriteRebaitAll(Utf8JsonWriter json, TrapWorld world, IReadOnlyList<(Trap Trap, BaitChoice? Choice)> rebait)
+    {
+        json.WriteStartArray("fill");
+
+        foreach (var group in rebait.Where(pair => pair.Choice != null).GroupBy(pair => (pair.Choice!.ItemId, world.Catalog.RoomName(pair.Trap.RoomId))))
+        {
+            json.WriteStartObject();
+            json.WriteNumber("bait", group.Key.ItemId);
+            json.WriteString("room", group.Key.Item2);
+            json.WriteNumber("n", group.Count());
+            json.WriteEndObject();
+        }
+
+        json.WriteEndArray();
+        json.WriteNumber("fillCount", rebait.Count(pair => pair.Choice != null));
+        json.WriteNumber("fillNone", rebait.Count(pair => pair.Choice == null));
     }
 
     /// <summary>One row's second line: the bait in it or the bait it gets next (0 for none left), its catch, and its wear.</summary>
