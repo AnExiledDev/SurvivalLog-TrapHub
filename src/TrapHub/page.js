@@ -1,7 +1,7 @@
 // Trap Hub's web half. Runs in Root.html, the document every game page iframe sits in. Draws the Trap Hub window over
 // all of them, styled like the game's own panels, and puts a trap button with a count badge in the HUD's tool column
 // (bottom left, above the phone and bag buttons), built like the game's own buttons there. Talks to the plugin through
-// vuplex.postMessage("slmod|traphub|<verb>") and is driven by window.__sltraphub.
+// Exiled's Toolkit's page API ("slmod|traphub|<verb>" over vuplex) and is driven by window.__sltraphub.
 (function () {
   if (window.__sltraphub) return;
 
@@ -9,7 +9,9 @@
   var HUD_CLASS = 'th-hud-btn';
   // Trap Hub's place in the HUD's tool column when Exiled's Toolkit lays it out in columns of four.
   var DOCK_ORDER = '10';
-  var HUD_STYLE_ID = 'th-hud-style';
+  var HUD_PAGE = /CoreUI1\.html/;
+  // The name the plugin's own UI size setting draws Trap Hub's panels at (Interface > UiScale).
+  var UI_SIZE_NAME = 'TrapHub';
   var BUSY_TIMEOUT_MS = 5000;
   var MAX_ROWS = 240;
   var MAX_ADD = 30;
@@ -99,12 +101,8 @@
   var ui = null;
   var isBusy = false;
   var busyTimer = 0;
-  var hudVersion = 0;
   // Bumped with each new catalog, so lines drawn from its names are redrawn when the names change.
   var catalogSeq = 0;
-  // Whether anything was put into a HUD page since the game was last left; while not, the page check has nothing to do.
-  var hasPlaced = false;
-  var hasReportedPageAccess = false;
   var hasReportedHudPlaced = false;
 
   function say(key) {
@@ -127,10 +125,9 @@
     return count === 1 ? say('nTrap') : say('nTraps', count);
   }
 
+  // Through the Toolkit's bridge. Nothing goes before its page API is there; the page says it is ready once it is.
   function send(message) {
-    try {
-      if (window.vuplex) window.vuplex.postMessage(PREFIX + message);
-    } catch (e) {}
+    if (etk) etk.send(PREFIX, message);
   }
 
   // One press at a time: a double click would otherwise ask twice. Every press is answered by a status line, which
@@ -395,10 +392,6 @@
     root.appendChild(win);
     document.body.appendChild(root);
 
-    // Drawn at the player's UI size (Exiled's Toolkit). The full-screen mask always fills the screen, so the window on
-    // it is what must fit.
-    uiSize(root, { fit: win });
-
     root.addEventListener('click', onClick);
     root.addEventListener('input', onInput);
     root.addEventListener('focusin', onFocus);
@@ -413,33 +406,21 @@
       if (img && img.tagName === 'IMG' && img.parentNode) img.parentNode.textContent = img.getAttribute('data-letter') || '?';
     }, true);
 
-    ui = { root: root, sum: sum, tabs: tabs, body: body, status: status, keys: keys, esc: esc };
+    ui = { root: root, win: win, sum: sum, tabs: tabs, body: body, status: status, keys: keys, esc: esc };
+    sizeWindow();
   }
 
-  // Hands a panel to Exiled's Toolkit to be drawn at the player's UI size. Before the Toolkit's script has loaded it
-  // waits in a list the Toolkit reads; without the Toolkit nothing happens.
-  function uiSize(node, options) {
-    options = Object.assign({ mod: 'TrapHub' }, options);
-    var toolkit = window.ExiledUi;
-
-    if (toolkit) {
-      toolkit.size(node, options);
-      return;
-    }
-
-    var waiting = window.__exiledUiWait = window.__exiledUiWait || [];
-    waiting.push([node, options]);
-    if (waiting.length > 32) waiting.shift();
+  // Drawn at the player's UI size (Exiled's Toolkit), once per window root. The full-screen mask always fills the
+  // screen, so the window on it is what must fit. A window drawn before the Toolkit's page API is there is handed
+  // over when the API arrives.
+  function sizeWindow() {
+    if (etk) etk.size(ui.root, { mod: UI_SIZE_NAME, fit: ui.win });
   }
 
-  // The style outlives a lost window root, so a rebuild must not stack another copy of it.
+  // One copy, which outlives a lost window root. A window drawn before the Toolkit's page API is there gets it when
+  // the API arrives.
   function addStyle() {
-    if (document.getElementById('th-style')) return;
-
-    var style = el('style');
-    style.id = 'th-style';
-    style.textContent = CSS;
-    document.head.appendChild(style);
+    if (etk) etk.addStyle(document, 'th-style', CSS);
   }
 
   function onClick(e) {
@@ -1658,127 +1639,87 @@
   function live(isLive, key) {
     state.isLive = !!isLive;
     state.key = key || '';
-    hudVersion++;
 
     if (ui && state.isOpen) renderKeys();
 
-    patchPagesSafely();
+    refreshHud();
   }
 
   // The number on the HUD button and the Traps tab: traps with a catch to take or waiting for bait.
   function badge(count) {
     state.badge = Math.max(0, count | 0);
-    hudVersion++;
 
     if (ui && state.isOpen) renderTabs();
 
-    patchPagesSafely();
+    refreshHud();
   }
 
   // ---------- HUD button ----------
 
-  var HUD_CSS = [
-    '.th-hud-btn{position:relative}',
-    '.th-hud-btn .th-hud-badge{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#e53935;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;pointer-events:none;box-shadow:0 1px 4px rgba(0,0,0,.6)}'
-  ].join('\n');
+  // The Toolkit's page API (window.ExiledToolkit). The game can run its script after this one, so this stays null
+  // until it has; the HUD button, the trap panel additions and the messages to the plugin start then.
+  var etk = null;
+  // The Trap Hub button in the HUD's tool column, drawn like the game's bag button. The Toolkit keeps it first in the
+  // column and writes changes into it in place.
+  var hudButton = null;
+  // What the button was last told, so it is told again only when something changed.
+  var shownHud = { isLive: null, key: null, badge: null, words: null };
+  // The Toolkit's check of the HUD page, which hands that page to patchHud.
+  var hudWatch = null;
 
-  // The HUD is a same-origin iframe, so its document can be reached from here; polled because the game creates and
-  // drops that iframe whenever it likes.
-  function patchPages() {
+  // Runs once the Toolkit's page API is there: at once when its script ran first, else when it runs.
+  function startWithToolkit(api) {
+    etk = api;
+
+    // A window drawn before the Toolkit arrived gets its style and its size now.
+    if (ui) {
+      addStyle();
+      sizeWindow();
+    }
+
+    hudButton = etk.addHudButton({
+      id: HUD_CLASS, order: DOCK_ORDER, icon: CAGE_PATH, title: 'Trap Hub', badgeClass: 'th-hud-badge', shown: false,
+      onClick: function () { send('toggle'); },
+      onPlace: noteHudPlaced
+    });
+    showHudState();
+    hudWatch = etk.watchPages(HUD_PAGE, patchHud, { everyCheck: true });
+    send('ready');
+  }
+
+  // What the plugin sent changed what the HUD shows: the button hears it at once, and the trap panel is patched now
+  // rather than at the next check.
+  function refreshHud() {
+    showHudState();
+
+    if (hudWatch) hudWatch.refresh();
+  }
+
+  // The HUD page, handed over at every check, since Vue redraws the trap panel when it likes.
+  function patchHud(doc) {
+    showHudState();
+
     // Out of a game with everything already taken back out, there is nothing to put in or take out.
-    if (!state.isLive && !hasPlaced) return;
+    if (!state.isLive && !doc.__thHasAdds) return;
 
-    var frames = document.querySelectorAll('iframe');
-
-    for (var i = 0; i < frames.length; i++) {
-      var src = frames[i].src || '';
-
-      if (!/CoreUI1\.html/.test(src)) continue;
-
-      var doc = null;
-
-      try {
-        doc = frames[i].contentDocument;
-      } catch (e) {}
-
-      if (!doc) {
-        if (!hasReportedPageAccess) send('diag|cannot reach the HUD document (root ' + location.protocol + ', iframe ' + src + ')');
-        hasReportedPageAccess = true;
-        continue;
-      }
-
-      placeHudButton(doc);
-      patchTrapPanel(doc);
-    }
-
-    // Each reachable HUD page has just had the additions taken out.
-    if (!state.isLive) hasPlaced = false;
+    patchTrapPanel(doc);
   }
 
-  function patchPagesSafely() {
-    try {
-      patchPages();
-    } catch (e) {}
+  // Shown only in a game, with the count, the key and the tip's words; each is written only when it changed.
+  function showHudState() {
+    if (!hudButton) return;
+
+    var words = window.__sltraphubWords;
+
+    if (shownHud.isLive === state.isLive && shownHud.key === state.key && shownHud.badge === state.badge && shownHud.words === words) return;
+
+    shownHud = { isLive: state.isLive, key: state.key, badge: state.badge, words: words };
+    hudButton.update({ shown: state.isLive, key: state.key, badge: state.badge, tip: say('tip') });
   }
 
-  // First in the tool column: the column is anchored at the bottom, so the first child sits on top and the game's own
-  // buttons do not move. The column hides itself in build mode, and the button with it.
-  function placeHudButton(doc) {
-    var column = doc.querySelector('.vertical-tools');
-    var existing = doc.querySelector('.' + HUD_CLASS);
-
-    if (!column || !state.isLive) {
-      if (existing) existing.remove();
-
-      return;
-    }
-
-    if (existing && existing.parentNode === column && existing.getAttribute('data-version') === String(hudVersion)) return;
-    if (existing) existing.remove();
-
-    addHudStyle(doc);
-    var node = hudButton(doc);
-
-    node.setAttribute('data-etk-dock', DOCK_ORDER);
-    column.insertBefore(node, column.firstChild);
-    hasPlaced = true;
-
+  function noteHudPlaced() {
     if (!hasReportedHudPlaced) send('diag|HUD button placed in the tool column');
     hasReportedHudPlaced = true;
-  }
-
-  function addHudStyle(doc) {
-    if (doc.getElementById(HUD_STYLE_ID)) return;
-
-    var style = doc.createElement('style');
-    style.id = HUD_STYLE_ID;
-    style.textContent = HUD_CSS;
-    (doc.head || doc.body).appendChild(style);
-  }
-
-  // The same markup as the game's bag button: its classes, an svg icon, and the hover tip its stylesheet shows. The
-  // HUD page watches its body for new buttons and tells the game where they are, so a click on this one reaches it.
-  function hudButton(doc) {
-    var node = doc.createElement('button');
-    node.className = 'ui-btn icon-sq interactive-btn has-entry-tip ' + HUD_CLASS;
-    node.setAttribute('data-interactive', '');
-    node.setAttribute('data-version', String(hudVersion));
-    node.appendChild(cage(doc));
-
-    if (state.badge > 0) {
-      var count = doc.createElement('span');
-      count.className = 'th-hud-badge';
-      count.textContent = state.badge > 99 ? '99+' : String(state.badge);
-      node.appendChild(count);
-    }
-
-    node.appendChild(entryTip(doc));
-    node.addEventListener('click', function (e) {
-      e.stopPropagation();
-      send('toggle');
-    });
-
-    return node;
   }
 
   function cage(doc) {
@@ -1791,30 +1732,6 @@
     svg.appendChild(path);
 
     return svg;
-  }
-
-  function entryTip(doc) {
-    var tip = doc.createElement('div');
-    var title = doc.createElement('div');
-    var body = doc.createElement('div');
-
-    tip.className = 'entry-tip';
-    title.className = 'entry-tip-title';
-    title.textContent = 'Trap Hub';
-    body.className = 'entry-tip-body';
-    body.textContent = say('tip');
-
-    if (state.key) {
-      var key = doc.createElement('span');
-      key.className = 'entry-tip-key';
-      key.textContent = state.key;
-      title.appendChild(key);
-    }
-
-    tip.appendChild(title);
-    tip.appendChild(body);
-
-    return tip;
   }
 
   // ---------- the game's own trap panel ----------
@@ -1887,7 +1804,7 @@
       hudKeyById[t.id] = JSON.stringify(t);
     });
     hudSeq++;
-    patchPagesSafely();
+    refreshHud();
   }
 
   // What a row's second line is drawn from besides its trap: the catalog's names and the plugin's words, which both
@@ -1927,7 +1844,6 @@
     }
 
     doc.__thHasAdds = true;
-    hasPlaced = true;
 
     var vue = vueState(doc);
 
@@ -2280,12 +2196,7 @@
   }
 
   function addPanelStyle(doc) {
-    if (doc.getElementById(PANEL_STYLE_ID)) return;
-
-    var style = doc.createElement('style');
-    style.id = PANEL_STYLE_ID;
-    style.textContent = PANEL_CSS;
-    (doc.head || doc.body).appendChild(style);
+    etk.addStyle(doc, PANEL_STYLE_ID, PANEL_CSS);
   }
 
   function make(doc, tag, className, words) {
@@ -2297,8 +2208,6 @@
     return node;
   }
 
-  setInterval(patchPagesSafely, 400);
-
   window.__sltraphub = { open: open, setData: setData, close: close, status: status, live: live, catalog: catalog, badge: badge, hud: hud };
-  send('ready');
+  (window.ExiledToolkitReady = window.ExiledToolkitReady || []).push(startWithToolkit);
 })();

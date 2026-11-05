@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ExiledToolkit.Web;
 using TrapHub.Core;
 using Xunit;
 using static TrapHub.Tests.FakeGame;
@@ -176,9 +177,9 @@ public class HudPanelTests
         Assert.Empty(game.Baited);
     }
 
-    private static PageScript Panel(FakeGame game, bool isRebait, string armedWords = "Deploying Defenses", string checkKey = "J")
+    private static PageScript Panel(FakeGame game, bool isRebait, string armedWords = "Deploying Defenses", string checkKey = "J", bool isToolkitFirst = true)
     {
-        var page = new PageScript();
+        var page = new PageScript(isToolkitFirst);
 
         page.Catalog(CatalogView.Write(game.World.Catalog));
         page.OpenHud();
@@ -187,6 +188,21 @@ public class HudPanelTests
         page.Hud(HudView.Ready(game.World, CarrotBook(), game.FloorCost, isRebait, checkKey));
 
         return page;
+    }
+
+    /// <summary>The game can run Trap Hub's script before the Toolkit's: the panel's additions wait for it, then come in at once.</summary>
+    [Fact]
+    public void Run_before_the_toolkit_the_trap_panel_gets_its_additions_once_the_toolkit_arrives()
+    {
+        var page = Panel(Home(), isRebait: true, isToolkitFirst: false);
+
+        Assert.Equal("0", page.Text("hudPage().querySelectorAll('.th-add').length"));
+
+        page.LoadToolkit();
+
+        Assert.Equal("1", page.Text("hudPage().querySelectorAll('.th-check-btn').length"));
+        Assert.Equal("5", page.Text("hudPage().querySelectorAll('.th-sub').length"));
+        Assert.True(page.Is("hudPage().getElementById('th-panel-style')"));
     }
 
     [Fact]

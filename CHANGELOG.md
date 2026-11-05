@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- Now uses Exiled's Toolkit for its shared parts, so it needs Exiled's Toolkit 0.19.0 or newer.
+- Made for Survival Log 1.1.20719.
+
 ## 0.6.1
 
 - The window key and the Check traps key are now unbound by default; use the trap button and the Check traps button in the HUD, or set keys in the settings.

@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Unity.IL2CPP;
+using ExiledToolkit;
+using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
 using HarmonyLib;
 using TrapHub.Adapters;
 using TrapHub.Core;
@@ -14,18 +17,27 @@ using UnityEngine;
 namespace TrapHub;
 
 [BepInPlugin(Guid, "Trap Hub", Version)]
-[BepInDependency(OptionalLive.ToolkitGuid, OptionalLive.ToolkitVersion)]
+[BepInDependency(ToolkitGuid, ToolkitVersion)]
 [BepInDependency(QuietTrapsGuid, BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.1";
+    private const string Version = "0.6.2";
+
+    /// <summary>Exiled's Toolkit: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
+    private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
+    private const string ToolkitVersion = ">=0.19.0";
+
     private const string QuietTrapsGuid = "com.dev.survivallog.quiettraps";
     private const string PresetFileName = "trap-hub.json";
+    private const string LogFileName = "trap-hub.log";
+
+    /// <summary>The name the page script hands its panels to the Toolkit's UI size with.</summary>
+    private const string UiSizeName = "TrapHub";
 
     public override void Load()
     {
-        OptionalUiSize.Bind(Config);
+        ModUiSize.Bind(Config, UiSizeName);
 
         var panelKey = Config.Bind("General", "PanelKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
             "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true. Unbound by default: the trap button in the HUD's tool column opens the window. Set a key here to open it from the keyboard too.\n" +
@@ -48,38 +60,40 @@ public sealed class Plugin : BasePlugin
         var isLoggingToFile = Config.Bind("Diagnostics", "LogToFile", false, new ConfigDescription(
             "When true, what Trap Hub does is also written to BepInEx\\trap-hub.log, which is kept between game starts. Turn it on when reporting a problem.\n" +
             "设为 true 时，Trap Hub 的操作也会写入 BepInEx\\trap-hub.log，该文件在重启游戏后保留。报告问题时再打开。", null, "ModManager.Advanced"));
-        var log = new TrapLog(Log, Path.Combine(Paths.BepInExRootPath, "trap-hub.log"));
-        var harmony = new Harmony(Guid);
+        var log = new ModLog(Log, LogFileName);
+
+        // Before the first line, since the file copy is on until the setting says otherwise.
+        LiveSettings.Watch(isLoggingToFile, isOn => log.IsFileOn = isOn);
+
+        var hooks = new PatchKit(new Harmony(Guid), log.Write);
         var isSoundsElsewhere = IL2CPPChainloader.Instance.Plugins.ContainsKey(QuietTrapsGuid);
         var session = new TrapSession(
             new GameTraps(log.Write),
-            new WebPage(log.Write),
+            new TrapPage(log.Write),
             new PresetFileOnDisk(Path.Combine(Paths.ConfigPath, PresetFileName), log.Write),
             (group, mode) => sounds[group].Value = Sounds.ModeName(mode),
             isOn => rebaitOnCheck.Value = isOn,
             log.Write);
 
-        OptionalLive.Watch(isLoggingToFile, isOn => log.IsFileOn = isOn);
         log.Write($"===== Trap Hub {Version} started");
-        InputGate.Apply(harmony, log.Write);
-        PageMessages.Apply(harmony, log.Write);
+        GameKeys.Apply(hooks);
 
         if (isSoundsElsewhere) log.Write("Quiet Traps is installed, so it handles the catch sounds and Trap Hub's sound settings are not used");
-        else SoundGate.Apply(harmony, log.Write);
+        else SoundGate.Apply(hooks);
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             session.UseControls(panelKey.Value, panelKeyShift.Value, checkKey.Value);
             log.Write($"window key {(panelKeyShift.Value ? "Shift+" : "")}{panelKey.Value}, check key {checkKey.Value}");
         }, panelKey, panelKeyShift, checkKey);
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             session.UseRebaitOnCheck(rebaitOnCheck.Value);
             log.Write("re-bait on check " + (rebaitOnCheck.Value ? "on" : "off"));
         }, rebaitOnCheck);
 
-        OptionalLive.Watch(() =>
+        LiveSettings.Watch(() =>
         {
             var modes = sounds.ToDictionary(pair => pair.Key, pair => Sounds.ParseMode(pair.Value.Value));
 

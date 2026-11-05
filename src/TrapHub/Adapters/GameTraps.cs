@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
+using ExiledToolkit.Web;
 using GameCore.HotUpdate;
 using GameCore.HotUpdate.Battle.Logic;
 using TrapHub.Core;
@@ -445,12 +448,12 @@ internal sealed class GameTraps : ITrapGame
 
     private TrapType ReadType(ConfigManager config, TrapManager traps, Config_Trap row)
     {
-        var name = Translate(config, row.Name) ?? NonEmpty(row.Name_Local) ?? $"Trap {row.ID}";
+        var name = GameNames.Translate(config, row.Name) ?? GameNames.NonEmpty(row.Name_Local) ?? $"Trap {row.ID}";
         var preyIds = Ints(row.Prey_Id);
         var rates = Floats(row.Base_Rate);
         var prey = preyIds.Select((id, i) => new PreyRate(id, i < rates.Count ? rates[i] : 0f)).ToList();
 
-        return new TrapType(row.ID, name, Icons().Resolve(NonEmpty(row.WebIcon)), row.Prey_Capacity > 0, CatchCost(traps, row), row.Empty_Weight, prey, Ints(row.Bait_id).ToHashSet());
+        return new TrapType(row.ID, name, Icons().Resolve(GameNames.NonEmpty(row.WebIcon)), row.Prey_Capacity > 0, CatchCost(traps, row), row.Empty_Weight, prey, Ints(row.Bait_id).ToHashSet());
     }
 
     private int CatchCost(TrapManager traps, Config_Trap row)
@@ -513,7 +516,7 @@ internal sealed class GameTraps : ITrapGame
 
             for (var i = 0; i < prey.Count && i < values.Count; i++) coefficients[prey[i]] = values[i];
 
-            bias[row.ID] = (NonEmpty(row.Des_name_Local), coefficients);
+            bias[row.ID] = (GameNames.NonEmpty(row.Des_name_Local), coefficients);
         }
 
         return bias;
@@ -523,9 +526,9 @@ internal sealed class GameTraps : ITrapGame
     private static string? RoomName(ConfigManager config, int id, string? biasName)
     {
         var room = config._Config_MapRoom_Dict is { } rooms && rooms.TryGetValue(id, out var found) ? found : null;
-        var name = room == null ? null : Translate(config, room.Name) ?? NonEmpty(room.Name_Local);
+        var name = room == null ? null : GameNames.Translate(config, room.Name) ?? GameNames.NonEmpty(room.Name_Local);
 
-        return name ?? (biasName == null ? null : Translate(config, biasName) ?? biasName);
+        return name ?? (biasName == null ? null : GameNames.Translate(config, biasName) ?? biasName);
     }
 
     private static Dictionary<string, (int Map, int Room)> ReadSlots(ConfigManager config)
@@ -570,10 +573,9 @@ internal sealed class GameTraps : ITrapGame
 
     private static TrapManager? Traps() => GameSingleton.Existing<BattleLogicWorld>()?._TrapManager;
 
-    private static string ItemName(ConfigManager config, Config_Item? item, int id) =>
-        (item == null ? null : Translate(config, item.ItemName) ?? NonEmpty(item.ItemName_Local) ?? NonEmpty(item.ItemName)) ?? $"Item {id}";
+    private static string ItemName(ConfigManager config, Config_Item? item, int id) => GameNames.ItemName(config, item) ?? $"Item {id}";
 
-    private string? ItemIcon(Config_Item? item) => item == null ? null : Icons().Resolve(NonEmpty(item.WebIcon) ?? NonEmpty(item.Icon));
+    private string? ItemIcon(Config_Item? item) => item == null ? null : Icons().Resolve(GameNames.NonEmpty(item.WebIcon) ?? GameNames.NonEmpty(item.Icon));
 
     private static List<int> Ints(Il2CppInts? list)
     {
@@ -603,13 +605,12 @@ internal sealed class GameTraps : ITrapGame
     {
         if (_icons != null) return true;
 
-        _iconScan ??= StartIconScan();
+        // Exiled's Toolkit walks the folder once for every mod; its task never fails.
+        _iconScan ??= WebIcons.StartScan();
 
         if (!_iconScan.IsCompleted) return false;
 
-        var (icons, note) = _iconScan.Status == TaskStatus.RanToCompletion
-            ? _iconScan.Result
-            : (IconIndex.Empty, "no web icons, traps and items will show letters instead: " + _iconScan.Exception?.GetBaseException().Message);
+        var (icons, note) = _iconScan.Result;
 
         _icons = icons;
         _iconScan = null;
@@ -617,29 +618,6 @@ internal sealed class GameTraps : ITrapGame
 
         return true;
     }
-
-    private static Task<(IconIndex Icons, string Note)> StartIconScan()
-    {
-        try
-        {
-            return WebIcons.StartScan();
-        }
-        catch (Exception ex)
-        {
-            return Task.FromResult((IconIndex.Empty, "no web icons, traps and items will show letters instead: " + ex.Message));
-        }
-    }
-
-    private static string? Translate(ConfigManager config, string? key)
-    {
-        if (string.IsNullOrEmpty(key)) return null;
-
-        var text = config.GetLocalTxt(key);
-
-        return string.IsNullOrEmpty(text) || text == key ? null : text;
-    }
-
-    private static string? NonEmpty(string? text) => string.IsNullOrWhiteSpace(text) ? null : text;
 
     private void ReportOnce(string operation, Exception ex)
     {

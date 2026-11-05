@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
+using ExiledToolkit.Game;
 using FMOD;
 using FMOD.Studio;
 using GameCore.HotUpdate;
-using HarmonyLib;
 using TrapHub.Core;
 using SoundGroup = TrapHub.Core.SoundGroup;
 
@@ -23,9 +23,7 @@ internal static class SoundGate
     private static readonly Dictionary<IntPtr, string?> PathsByDescription = new();
     private static readonly List<(EventInstance Instance, float StopAt)> Chiming = new();
     private static IReadOnlyDictionary<SoundGroup, SoundMode> _modes = new Dictionary<SoundGroup, SoundMode>();
-    private static Action<string> _log = _ => { };
-    private static Harmony? _harmony;
-    private static bool _hasReportedFailure;
+    private static PatchKit? _hooks;
     private static float _now;
 
     // These hooks run on every sound the game makes, so they are put in only once a setting needs them, and each one
@@ -36,11 +34,7 @@ internal static class SoundGate
     private static bool _isStartHookIn;
 
     /// <summary>Hooks nothing yet: <see cref="Use"/> hooks what the chosen modes need, so with every sound Normal no sound pays for a hook.</summary>
-    public static void Apply(Harmony harmony, Action<string> log)
-    {
-        _log = log;
-        _harmony = harmony;
-    }
+    public static void Apply(PatchKit hooks) => _hooks = hooks;
 
     /// <summary>Called on the main thread at start and after each settings change.</summary>
     public static void Use(IReadOnlyDictionary<SoundGroup, SoundMode> modes)
@@ -55,20 +49,20 @@ internal static class SoundGate
             _isAnyChanged |= mode != SoundMode.Normal;
         }
 
-        if (_harmony == null) return;
+        if (_hooks is not { } hooks) return;
 
         if (_isAnyMuted && !_areMuteHooksIn)
         {
             _areMuteHooksIn = true;
-            Hook(_harmony, typeof(FmodManager), "PlayEnv3dAction", prefix: nameof(SkipPlayIfMuted));
-            Hook(_harmony, typeof(FmodManager), "PlayBattle3dAction", prefix: nameof(SkipPlayIfMuted));
-            Hook(_harmony, typeof(EventDescription), nameof(EventDescription.createInstance), postfix: nameof(SilenceIfMuted));
+            Hook(hooks, typeof(FmodManager), "PlayEnv3dAction", prefix: nameof(SkipPlayIfMuted));
+            Hook(hooks, typeof(FmodManager), "PlayBattle3dAction", prefix: nameof(SkipPlayIfMuted));
+            Hook(hooks, typeof(EventDescription), nameof(EventDescription.createInstance), postfix: nameof(SilenceIfMuted));
         }
 
         if (_isAnyChanged && !_isStartHookIn)
         {
             _isStartHookIn = true;
-            Hook(_harmony, typeof(EventInstance), nameof(EventInstance.start), prefix: nameof(SkipStartIfMuted));
+            Hook(hooks, typeof(EventInstance), nameof(EventInstance.start), prefix: nameof(SkipStartIfMuted));
         }
     }
 
@@ -94,24 +88,8 @@ internal static class SoundGate
         }
     }
 
-    private static void Hook(Harmony harmony, Type type, string method, string? prefix = null, string? postfix = null)
-    {
-        var name = $"{type.Name}.{method}";
-
-        try
-        {
-            var original = AccessTools.Method(type, method) ?? throw new MissingMethodException(type.Name, method);
-
-            harmony.Patch(original,
-                prefix: prefix is null ? null : new HarmonyMethod(typeof(SoundGate), prefix),
-                postfix: postfix is null ? null : new HarmonyMethod(typeof(SoundGate), postfix));
-            _log("hooked " + name);
-        }
-        catch (Exception ex)
-        {
-            _log($"could not hook {name}, catch sound settings may not apply: {ex.Message}");
-        }
-    }
+    private static void Hook(PatchKit hooks, Type type, string method, string? prefix = null, string? postfix = null) =>
+        hooks.Patch(typeof(SoundGate), type, method, prefix: prefix, postfix: postfix, done: $"hooked {type.Name}.{method}", consequence: "catch sound settings may not apply");
 
     /// <summary>The first argument of both FmodManager targets is the event path. False skips the sound.</summary>
     private static bool SkipPlayIfMuted(string __0)
@@ -184,11 +162,6 @@ internal static class SoundGate
         return path;
     }
 
-    private static void ReportFailureOnce(Exception ex)
-    {
-        if (_hasReportedFailure) return;
-
-        _hasReportedFailure = true;
-        _log("sound check failed, further failures are not logged: " + ex);
-    }
+    // One kind for every hook, so the first failure is the only one logged, whichever hook it came from.
+    private static void ReportFailureOnce(Exception ex) => _hooks?.Fail("checking a catch sound", ex);
 }

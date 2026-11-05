@@ -17,7 +17,7 @@ Press **Check traps** in the game's Home Traps list to check every trap: collect
 - **Allowed bait**: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow baits one at a time, or every bait the filter shows. Quick picks allow every bait in your presets, or every universal bait you own, in one press. Each bait shows what it attracts, which traps take it and which presets use it.
 - **Catch odds**: each trap shows its likely catches for the bait it holds or would get, by the game's own rates, room and talents included.
 - **Catch sounds**: the sound a trap plays while it holds a catch can play as normal, chime once, or stay muted, for each trap sound. When Quiet Traps is installed, it handles the sounds instead.
-- **UI size**: with Exiled's Toolkit 0.10.0 or newer, its UI size setting (`UiScale`) draws the window bigger or smaller, as far as the window still fits on the screen. The HUD button and what Trap Hub adds to the game's trap list keep the game's size. With Toolkit 0.11.0 or newer, Trap Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's.
+- **UI size**: Exiled's Toolkit's UI size setting (`UiScale`) draws the window bigger or smaller, as far as the window still fits on the screen. The HUD button and what Trap Hub adds to the game's trap list keep the game's size. Trap Hub's own `UiScale` under Interface sets a size for this mod alone; at 0, the default, it follows the Toolkit's.
 
 Presets and allowed bait are kept in `BepInEx\config\trap-hub.json`, shared by every save. Trap Hub adds nothing to your save and does not edit game files. You can remove it at any time.
 
@@ -25,9 +25,9 @@ Trap Hub does what Trapline does. Use one or the other, not both.
 
 ## Requirements
 
-- Survival Log 1.1.20151. Built for this version; a game update can break it until the mod is updated.
+- Survival Log 1.1.20719. Built for this version; a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
-- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.12.0 or newer. Trap Hub does not load without it. It keeps Trap Hub's keys quiet while you type, shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, lays the HUD's tool buttons out four high, in columns, when there are more than four, and its UI size setting sizes the window.
+- [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.19.0 or newer. Trap Hub does not load without it. It keeps Trap Hub's keys quiet while you type, shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, lays the HUD's tool buttons out four high, in columns, when there are more than four, and its UI size setting sizes the window.
 
 ## Install
 

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using ExiledToolkit;
+using ExiledToolkit.Game;
+using ExiledToolkit.Kit;
+using ExiledToolkit.Web;
 using GameCore.HotUpdate.ReduxUI;
 using TrapHub.Core;
 using UnityEngine;
@@ -19,8 +22,12 @@ internal sealed class TrapSession
     private const float ClosedRefreshSeconds = 2f;
     private const float AutoSeconds = 5f;
 
+    /// <summary>The name the window holds the game's hotkeys and clicks under while it is open.</summary>
+    private const string WindowName = "TrapHub.window";
+
     private readonly ITrapGame _game;
-    private readonly WebPage _page;
+    private readonly TrapPage _page;
+    private readonly PageMailbox _messages = PageInbox.Listen(PageCommand.Prefix);
     private readonly WebKeyboard _keyboard = new();
     private readonly PresetFileOnDisk _file;
     private readonly Action<SoundGroup, SoundMode> _saveSound;
@@ -56,7 +63,7 @@ internal sealed class TrapSession
     private readonly DrawnFrom _hud = new(isPositionDrawn: true);
     private readonly DrawnFrom _view = new(isPositionDrawn: false);
 
-    public TrapSession(ITrapGame game, WebPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
+    public TrapSession(ITrapGame game, TrapPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
     {
         _game = game;
         _page = page;
@@ -64,8 +71,8 @@ internal sealed class TrapSession
         _saveSound = saveSound;
         _saveRebait = saveRebait;
         _log = log;
-        _isPanelKeyDown = () => Input.GetKeyDown(_panelKey) && InputGate.IsShiftHeld() == _isPanelShifted;
-        _isCheckKeyDown = () => Input.GetKeyDown(_checkKey) && !InputGate.IsShiftHeld();
+        _isPanelKeyDown = () => Input.GetKeyDown(_panelKey) && GameKeys.IsShiftHeld() == _isPanelShifted;
+        _isCheckKeyDown = () => Input.GetKeyDown(_checkKey) && !GameKeys.IsShiftHeld();
     }
 
     private static bool IsChinese => GameLanguage.IsChinese();
@@ -124,12 +131,12 @@ internal sealed class TrapSession
         _page.KeepInstalled(now);
         SoundGate.Tick(now);
 
-        while (PageMessages.TryTake(out var command)) HandleSafely(command);
+        TakeMessages();
 
         // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
         // The window's key wins when both keys are the same and Shift is not part of the window's key. A key typed into
         // one of the game's own text boxes (the item search), or into any mod's page, is text, not one of these keys.
-        if (!_keyboard.IsClaimed && !InputGate.IsGameTyping)
+        if (!_keyboard.IsClaimed && !GameKeys.IsGameTyping)
         {
             if (Hotkey.Fires(_panelKey != KeyCode.None, _isPanelKeyDown, IsTypingAnywhere))
             {
@@ -154,6 +161,15 @@ internal sealed class TrapSession
         }
 
         if (now >= _nextRefreshAt) Refresh(now);
+    }
+
+    /// <summary>The page's messages since the last frame, in the order sent; one the plugin cannot read is dropped.</summary>
+    private void TakeMessages()
+    {
+        while (_messages.TryTake(out var message))
+        {
+            if (PageCommand.Parse(message) is { } command) HandleSafely(command);
+        }
     }
 
     /// <summary>One command that throws must not cost the rest of the frame its commands or the key checks.</summary>
@@ -210,7 +226,7 @@ internal sealed class TrapSession
                 Check(check.IsThisFloor ? "check this floor" : "check traps", check.IsThisFloor ? _lastWorld?.PlayerFloor : null);
                 break;
             case PageCommand.RebaitOnCheck rebait:
-                // Without Exiled's Toolkit a changed setting is not applied again on its own, so it is used here too.
+                // Exiled's Toolkit applies the saved setting at the next frame; it is used here too so this frame's refresh shows it.
                 _saveRebait(rebait.IsOn);
                 UseRebaitOnCheck(rebait.IsOn);
                 _log("re-bait on check " + (rebait.IsOn ? "on" : "off"));
@@ -404,7 +420,7 @@ internal sealed class TrapSession
         }
 
         _isOpen = true;
-        InputGate.PanelOpened();
+        InputGate.Opened(WindowName);
         Show(read, isOpening: true);
         _log("window opened");
     }
@@ -415,7 +431,7 @@ internal sealed class TrapSession
 
         _isOpen = false;
         _keyboard.Release();
-        InputGate.PanelClosed();
+        InputGate.Closed(WindowName);
         _page.Close();
     }
 

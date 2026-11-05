@@ -5,8 +5,8 @@ using static TrapHub.Tests.FakeGame;
 namespace TrapHub.Tests;
 
 /// <summary>
-/// What keeps a refresh cheap: a long job spread over frames ends as it would in one, a view is not built again from a
-/// home that has not changed, and anything that did change is still seen.
+/// What keeps a refresh cheap: a view is not built again from a home that has not changed, and anything that did change
+/// is still seen.
 /// </summary>
 public class RefreshCostTests
 {
@@ -17,62 +17,6 @@ public class RefreshCostTests
         Traps = { T(1, prey: Rabbit), T(2), T(3, floor: 2, type: Net, room: Attic) },
         Stock = { Bag(1, Carrot, 5) },
     };
-
-    private static IEnumerable<bool> Steps(List<string> done)
-    {
-        foreach (var name in new[] { "slots", "types", "bait 1", "bait 2", "prey", "rooms" })
-        {
-            done.Add(name);
-
-            yield return true;
-        }
-    }
-
-    [Fact]
-    public void A_job_cut_into_the_smallest_slices_ends_with_what_one_long_slice_does()
-    {
-        var whole = new List<string>();
-        var sliced = new List<string>();
-        var wholeJob = new SlicedJob(Steps(whole));
-        var slicedJob = new SlicedJob(Steps(sliced));
-        var slices = 0;
-
-        Assert.True(wholeJob.Advance(() => false));
-
-        while (!slicedJob.Advance(() => true)) slices++;
-
-        Assert.Equal(whole, sliced);
-        Assert.True(slicedJob.IsDone);
-        Assert.True(slices >= whole.Count - 1, "each slice ran more than one step even though the slice was spent");
-    }
-
-    [Fact]
-    public void A_step_waiting_on_other_work_holds_the_rest_for_the_next_frame()
-    {
-        var done = new List<string>();
-        var isScanDone = false;
-        var job = new SlicedJob(WaitForScan());
-
-        IEnumerable<bool> WaitForScan()
-        {
-            done.Add("start");
-
-            while (!isScanDone) yield return false;
-
-            done.Add("after the scan");
-
-            yield return true;
-        }
-
-        Assert.False(job.Advance(() => false));
-        Assert.False(job.Advance(() => false));
-        Assert.Equal(new[] { "start" }, done);
-
-        isScanDone = true;
-
-        Assert.True(job.Advance(() => false));
-        Assert.Equal(new[] { "start", "after the scan" }, done);
-    }
 
     [Fact]
     public void A_fresh_read_of_a_home_that_has_not_changed_is_not_drawn_again()

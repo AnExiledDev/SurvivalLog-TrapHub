@@ -1,20 +1,29 @@
+using ExiledToolkit.Web;
 using TrapHub.Core;
 using Jint;
 
 namespace TrapHub.Tests;
 
 /// <summary>
-/// page.js exactly as the plugin embeds it, run in Jint on top of FakePage.js (Root.html, the game's HUD page and the
-/// vuplex bridge). The calls into the script are the ones WebPage makes, and what the script posts is parsed with the
-/// real PageCommand, so a test sees the commands the plugin would act on.
+/// page.js exactly as the plugin embeds it, run in Jint with Exiled's Toolkit's page API (api.js, from the Toolkit's
+/// source) on top of FakePage.js (Root.html, the game's HUD page and the vuplex bridge). The calls into the script are
+/// the ones TrapPage makes, and what the script posts is parsed with the real PageCommand, so a test sees the commands
+/// the plugin would act on.
 /// </summary>
 internal sealed class PageScript
 {
     private readonly Engine _engine = new();
 
-    public PageScript()
+    /// <param name="isToolkitFirst">
+    /// The game runs the Toolkit's script first, or with false Trap Hub's first; then the Toolkit's runs only at
+    /// <see cref="LoadToolkit"/>.
+    /// </param>
+    public PageScript(bool isToolkitFirst = true)
     {
         _engine.Execute(Resource("TrapHub.Tests.FakePage.js"));
+
+        if (isToolkitFirst) _engine.Execute(Resource("ExiledToolkit.api.js"));
+
         _engine.Execute(Resource("TrapHub.page.js"));
         Hear();
     }
@@ -24,6 +33,12 @@ internal sealed class PageScript
 
     /// <summary>The script's "diag|" notes, as the plugin logs them.</summary>
     public List<string> Notes { get; } = new();
+
+    /// <summary>Whether the script told the plugin it is ready, which has the plugin send it everything again.</summary>
+    public bool HasSaidReady { get; private set; }
+
+    /// <summary>The Toolkit's page API arriving after Trap Hub's script.</summary>
+    public void LoadToolkit() => Run(Resource("ExiledToolkit.api.js"));
 
     public void Run(string statements)
     {
@@ -35,7 +50,7 @@ internal sealed class PageScript
 
     public bool Is(string expression) => _engine.Evaluate($"!!({expression})").AsBoolean();
 
-    /// <summary>One run of the script's 400 ms page check.</summary>
+    /// <summary>One run of the Toolkit's 250 ms page check, which hands the HUD page to the script.</summary>
     public void Poll() => Run("poll()");
 
     public void OpenHud() => Run("openHud()");
@@ -82,6 +97,7 @@ internal sealed class PageScript
         switch (command)
         {
             case PageCommand.Ready:
+                HasSaidReady = true;
                 break;
             case PageCommand.Note note:
                 Notes.Add(note.Text);

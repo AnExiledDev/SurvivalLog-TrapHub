@@ -382,7 +382,7 @@ public class PageScriptTests
         Assert.True(page.Is("handed[1].options.fit === document.querySelector('.th-win')"));
     }
 
-    /// <summary>The Toolkit's script can load after this one; the window waits in the list it reads when it starts.</summary>
+    /// <summary>The Toolkit's UI size script can load after its page API; the window waits in the list it reads when it starts.</summary>
     [Fact]
     public void Before_the_toolkit_has_loaded_the_window_waits_for_it()
     {
@@ -390,6 +390,55 @@ public class PageScriptTests
 
         Assert.Equal("1", page.Text("window.__exiledUiWait.length"));
         Assert.Equal("th-root", page.Text("window.__exiledUiWait[0][0].id"));
+        Assert.True(page.Is("window.__exiledUiWait[0][1].fit === document.querySelector('.th-win')"));
+    }
+
+    // ===== Load order: the game can run Trap Hub's script before the Toolkit's =====
+
+    /// <summary>
+    /// The plugin sends everything again when the page says it is ready, so the page says so only once the Toolkit's
+    /// bridge is there; the HUD button then shows what the plugin sent while it waited.
+    /// </summary>
+    [Fact]
+    public void Run_before_the_toolkit_the_page_says_ready_and_shows_the_hud_button_once_the_toolkit_arrives()
+    {
+        var page = new PageScript(isToolkitFirst: false);
+
+        page.OpenHud();
+        page.Live(true, "J");
+        page.Badge(2);
+
+        Assert.False(page.HasSaidReady);
+        Assert.False(page.Is("hudButton()"));
+
+        page.LoadToolkit();
+
+        Assert.True(page.HasSaidReady);
+        Assert.Equal("2", page.Text("hudButton().querySelector('.th-hud-badge').textContent"));
+
+        page.Click("hudButton()");
+
+        Assert.Equal(new PageCommand[] { new PageCommand.Toggle() }, page.Sent);
+    }
+
+    /// <summary>A window the plugin opened before the Toolkit's script ran gets its style and its UI size once it runs.</summary>
+    [Fact]
+    public void A_window_opened_before_the_toolkit_gets_its_style_and_size_when_the_toolkit_arrives()
+    {
+        var page = new PageScript(isToolkitFirst: false);
+
+        page.Catalog(CatalogView.Write(Home().World.Catalog));
+        page.Open(TrapView.Ready(Home().World, TwoPresets(), Settings));
+
+        Assert.False(page.Is("document.getElementById('th-style')"));
+        Assert.False(page.Is("window.__exiledUiWait"));
+
+        page.LoadToolkit();
+
+        Assert.True(page.Is("document.getElementById('th-style')"));
+        Assert.Equal("1", page.Text("window.__exiledUiWait.length"));
+        Assert.Equal("th-root", page.Text("window.__exiledUiWait[0][0].id"));
+        Assert.Equal("TrapHub", page.Text("window.__exiledUiWait[0][1].mod"));
         Assert.True(page.Is("window.__exiledUiWait[0][1].fit === document.querySelector('.th-win')"));
     }
 }
