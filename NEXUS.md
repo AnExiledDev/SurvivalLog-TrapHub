@@ -2,6 +2,8 @@ Name: Trap Hub
 Summary: Every trap at home in one window, grouped by room, and one button in the game's own trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps food safe, and each trap shows its wear and catch odds.
 
 Description (BBCode):
+[center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
+
 Every trap at home in one window: what each one holds, what bait it gets next, how worn it is and what it is likely to catch. Press [b]Check traps[/b] in the game's Home Traps list to check every trap: collect every catch, then bait every empty trap. Press the trap button in the tool column on the left of the screen to open the window. Both can have a key too (CheckKey and PanelKey in the config), unbound by default; the keys do nothing while you type in a text box. The button shows how many traps hold a catch to take or wait for bait.
 
 [size=5]Main features[/size]
@@ -36,6 +38,7 @@ None known.
 [*]Survival Log 1.1.20719. A game update can break it until the mod is updated.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]. Install it first.[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 or newer. Trap Hub does not load without it. It keeps Trap Hub's keys quiet while you type, shows Trap Hub's messages as toasts while the window is closed, applies settings changed on the Mod Manager's Mods screen without a restart, and its UI size setting sizes the window.[/*]
+[*]Optional: [url=https://www.nexusmods.com/survivallog/mods/73]Mod Manager[/url]. With it, you can change every setting in game on its Mods screen and see what each one does, without opening the config file.[/*]
 [/list]
 
 [size=5]Installation[/size]
@@ -94,6 +97,7 @@ Trap Hub 包含 Trapline 的功能，两者请只装一个。安装前如已装�
 [*]Survival Log 1.1.20719。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 或更新版本。没有它本模组不会加载。打字时它让 Trap Hub 的按键不起作用；窗口关闭时，它把 Trap Hub 的消息显示为弹出通知；它让在 Mod Manager 的模组界面修改的设置无需重启即可生效，它的界面大小设置还能调整窗口的大小。[/*]
+[*]可选：[url=https://www.nexusmods.com/survivallog/mods/73]Mod Manager[/url]。装了它，可以在游戏里它的「模组」界面修改每项设置，并看到每项的说明，不用打开配置文件。[/*]
 [/list]
 
 [size=5]安装[/size]
