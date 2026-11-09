@@ -9,7 +9,7 @@ using System.Text.Json;
 namespace TrapHub.Core;
 
 /// <summary>
-/// The JSON for the additions to the game's own trap panel in the HUD: each trap's bait, catch and wear for its row,
+/// The JSON for the additions to the game's trap panel in the HUD: each trap's bait, catch and wear for its row,
 /// and the Check traps plan for the button's tip. Items are ids the page names from the catalog (CatalogView).
 /// </summary>
 public static class HudView

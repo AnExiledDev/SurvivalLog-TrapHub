@@ -1,6 +1,6 @@
 // Trap Hub's web half. Runs in Root.html, the document every game page iframe sits in. Draws the Trap Hub window over
-// all of them, styled like the game's own panels, and puts a trap button with a count badge in the HUD's tool column
-// (bottom left, above the phone and bag buttons), built like the game's own buttons there. Talks to the plugin through
+// all of them, styled like the game's panels, and puts a trap button with a count badge in the HUD's tool column
+// (bottom left, above the phone and bag buttons), built like the game's buttons there. Talks to the plugin through
 // Exiled's Toolkit's page API ("slmod|traphub|<verb>" over vuplex) and is driven by window.__sltraphub.
 (function () {
   if (window.__sltraphub) return;
@@ -1734,7 +1734,7 @@
     return svg;
   }
 
-  // ---------- the game's own trap panel ----------
+  // ---------- the game's trap panel ----------
 
   // The HUD's trap panel (CoreUI1.html, above the objectives): a toggle row that opens a list of every trap. Trap Hub
   // adds a Check traps button with its plan as the hover tip and a Re-bait box to the row, built like the game's

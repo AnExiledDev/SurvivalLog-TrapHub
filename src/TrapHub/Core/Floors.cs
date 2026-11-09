@@ -27,7 +27,7 @@ public static class Floors
         _ => level,
     };
 
-    /// <summary>How many floor changes apart two levels are, when the game's own route cannot be read. There is no level 0.</summary>
+    /// <summary>How many floor changes apart two levels are, when the game's route cannot be read. There is no level 0.</summary>
     public static int Steps(int fromLevel, int toLevel)
     {
         var steps = System.Math.Abs(toLevel - fromLevel);

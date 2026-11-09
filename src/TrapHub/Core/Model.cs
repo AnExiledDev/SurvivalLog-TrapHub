@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace TrapHub.Core;
 
-/// <summary>The game's own HUD states for a trap (TrapManager.GetTrapHudStatus).</summary>
+/// <summary>The game's HUD states for a trap (TrapManager.GetTrapHudStatus).</summary>
 public enum TrapState
 {
     Armed = 0,

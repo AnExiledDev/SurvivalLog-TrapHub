@@ -15,7 +15,7 @@ using Il2CppInts = Il2CppSystem.Collections.Generic.List<int>;
 namespace TrapHub.Adapters;
 
 /// <summary>
-/// The game's side of every press. Reads go through the trap manager the game's own HUD and trap panel use; a press
+/// The game's side of every press. Reads go through the trap manager the game's HUD and trap panel use; a press
 /// calls the same handler the panel's buttons send their events to. Each call fails soft: an exception is logged once
 /// per kind of call and answered as a refusal.
 /// </summary>
@@ -142,7 +142,7 @@ internal sealed class GameTraps : ITrapGame
     }
 
     /// <summary>
-    /// The game's own route between two floors, counted in segments; a route it cannot give falls back to counting
+    /// The game's route between two floors, counted in segments; a route it cannot give falls back to counting
     /// levels. The game builds a route from its floor tables alone, so each pair is asked once per loaded game.
     /// </summary>
     public int FloorCost(int fromFloor, int toFloor)

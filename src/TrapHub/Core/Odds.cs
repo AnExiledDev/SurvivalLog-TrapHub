@@ -11,7 +11,7 @@ public sealed record OddsResult(IReadOnlyList<(int PreyId, double Chance)> Prey,
 }
 
 /// <summary>
-/// Catch odds by the game's own formula (TrapManager.CalculateNormalizedWeights). Each prey weighs its base rate times
+/// Catch odds by the game's formula (TrapManager.CalculateNormalizedWeights). Each prey weighs its base rate times
 /// the bait's multiplier for it (times the bait talent), times the room's multiplier, times the rare-prey bonus for rare
 /// prey. Nothing weighs the trap's empty weight, less the level reduction. A chance is a weight over the sum of all.
 /// </summary>

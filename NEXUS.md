@@ -1,5 +1,5 @@
 Name: Trap Hub
-Summary: Every trap at home in one window, grouped by room, and one button in the game's own trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps food safe, and each trap shows its wear and catch odds.
+Summary: Every trap at home in one window, grouped by room, and one button in the game's trap list that checks them all: it collects every catch, then baits every empty trap. Bait presets set an ordered list of baits with fallbacks per trap type or per trap, an allowed bait list keeps food safe, and each trap shows its wear and catch odds.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
@@ -11,13 +11,13 @@ Every trap at home in one window: what each one holds, what bait it gets next, h
 [*][b]All traps at a glance[/b]: every trap at home, grouped by room with your floor marked, with its state, its bait, its store and how many catches it has left before it breaks.[/*]
 [*][b]Find a trap fast[/b]: show the traps that need you, the armed ones or all, and search by trap, room or prey. The side panel lists what waits; press a line to see those traps.[/*]
 [*][b]Check all traps[/b]: collects every catch, your floor first, nearest trap first, then baits every empty trap from its preset. [b]This floor only[/b] does the same for the floor you are on; [b]Collect only[/b] and [b]Bait only[/b] do one half.[/*]
-[*][b]In the game's own trap list[/b]: the Home Traps list in the HUD gets a Check traps button, whose tip shows what the check will collect, bait and skip, a Re-bait traps button that baits every trap with no bait without collecting anything, and a Re-bait box that turns refilling emptied traps on or off. Each trap shows its bait, its catch and the catches it has left.[/*]
+[*][b]In the game's trap list[/b]: the Home Traps list in the HUD gets a Check traps button, whose tip shows what the check will collect, bait and skip, a Re-bait traps button that baits every trap with no bait without collecting anything, and a Re-bait box that turns refilling emptied traps on or off. Each trap shows its bait, its catch and the catches it has left.[/*]
 [*][b]Bait presets[/b]: an ordered list of baits, so when one runs out the next is used. Each step can keep a number back, and the preset can fall back to any allowed universal bait.[/*]
 [*][b]Per trap or per type[/b]: each trap type has a default preset, and any trap can have its own.[/*]
 [*][b]Where bait comes from[/b]: bag only, or bag first and then home storage, and the food closest to spoiling first.[/*]
 [*][b]Auto re-bait[/b]: a preset can bait its empty traps by itself, off, only on your floor, or always.[/*]
 [*][b]Allowed bait[/b]: Trap Hub only puts bait you allow in your traps. Everything starts blocked. Allow every bait in your presets, or every universal bait you own, in one press. Each bait shows what it attracts, which traps take it and which presets use it.[/*]
-[*][b]Catch odds[/b]: each trap shows its likely catches for its bait, by the game's own rates, room and talents included.[/*]
+[*][b]Catch odds[/b]: each trap shows its likely catches for its bait, by the game's rates, room and talents included.[/*]
 [*][b]Catch sounds[/b]: each trap sound can play as normal, chime once, or stay muted. When Quiet Traps is installed, it handles the sounds instead.[/*]
 [*][b]UI size[/b]: Exiled's Toolkit's UI size setting draws the window bigger or smaller, as far as it still fits on the screen. Trap Hub's own UiScale setting can set a size for this mod alone.[/*]
 [/list]

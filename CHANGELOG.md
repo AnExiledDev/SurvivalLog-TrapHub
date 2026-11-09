@@ -37,7 +37,7 @@
 ## 0.4.3
 
 - The Trap Hub window and its pop-up messages can be drawn bigger or smaller with the UI size setting of Exiled's Toolkit 0.10.0 or newer. A change shows at once, and the window only grows as far as it still fits on the screen.
-- The HUD button and what Trap Hub adds to the game's trap list keep the game's size, like the game's own buttons and text around them.
+- The HUD button and what Trap Hub adds to the game's trap list keep the game's size, like the game's buttons and text around them.
 - Made for Survival Log 1.1.19611.
 
 ## 0.4.2
@@ -54,7 +54,7 @@
 
 ## 0.4.0
 
-- The game's own Home Traps list in the HUD gets a **Check traps** button and a **Re-bait** box, beside the list's title like the plants list's Tend Garden button and Replant box.
+- The game's Home Traps list in the HUD gets a **Check traps** button and a **Re-bait** box, beside the list's title like the plants list's Tend Garden button and Replant box.
 - Hover the Check traps button to see what it will do: what it collects and where, what it baits with, how many traps on how many floors, and which traps it leaves and why.
 - Each trap in the list gets a second line: its bait or the bait it gets next, its catch, and how many catches it has left with a wear bar. The list opens wider to fit them, and a line on top counts the catches to collect, the traps to bait and the traps about to break, with a link to the Trap Hub window.
 - A full auto trap now reads "full, collect to restart", and the English status "Deploying Defenses" reads "Armed".

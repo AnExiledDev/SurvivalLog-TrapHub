@@ -6,7 +6,7 @@ using static TrapHub.Tests.FakeGame;
 
 namespace TrapHub.Tests;
 
-/// <summary>The additions to the game's own HUD trap panel: the Check traps plan, each row's second line, and the controls.</summary>
+/// <summary>The additions to the game's HUD trap panel: the Check traps plan, each row's second line, and the controls.</summary>
 public class HudPanelTests
 {
     private static PresetBook CarrotBook() => Book(new[] { Carrot }, Preset("p1", Step(Carrot)));

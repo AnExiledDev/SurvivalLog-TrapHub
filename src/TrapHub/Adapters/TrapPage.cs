@@ -7,7 +7,7 @@ using TrapHub.Core;
 namespace TrapHub.Adapters;
 
 /// <summary>
-/// The mod's half that lives in the game's web UI: page.js, run in the root document the game's own pages sit in. It
+/// The mod's half that lives in the game's web UI: page.js, run in the root document the game's pages sit in. It
 /// draws the window and puts the Trap Hub button in the HUD's tool column. The web view can reload at any time and
 /// lose the script, so Exiled's Toolkit checks for it every couple of seconds and the session puts it back when the
 /// page says it is missing.
@@ -61,7 +61,7 @@ internal sealed class TrapPage
     /// <summary>Names, icons and what each trap takes and catches; the views refer to items by id only.</summary>
     public bool Catalog(string catalogJson) => _page.Call($"catalog({catalogJson})");
 
-    /// <summary>The rows and Check traps plan for the game's own trap panel in the HUD (HudView).</summary>
+    /// <summary>The rows and Check traps plan for the game's trap panel in the HUD (HudView).</summary>
     public bool Hud(string hudJson) => _page.Call($"hud({hudJson})");
 
     /// <summary>The count badge on the HUD button, sent whether or not the window is open.</summary>

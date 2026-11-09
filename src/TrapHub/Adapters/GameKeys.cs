@@ -6,13 +6,13 @@ namespace TrapHub.Adapters;
 
 /// <summary>
 /// The key checks only Trap Hub needs; Exiled's Toolkit holds the game's hotkeys and sends every click to the web UI
-/// while the window is open. A key typed into one of the game's own text boxes (the item search) is text, not one of
+/// while the window is open. A key typed into one of the game's text boxes (the item search) is text, not one of
 /// Trap Hub's keys. Static because a Harmony patch has nowhere else to look.
 /// </summary>
 internal static class GameKeys
 {
     public static void Apply(PatchKit hooks) =>
-        hooks.Patch(typeof(GameKeys), typeof(HotKeyManager), "Update", postfix: nameof(NoteGameTyping), done: "Trap Hub's keys wait while you type in the game's own text boxes", consequence: "typing Trap Hub's keys in the game's item search may also open the window or check traps");
+        hooks.Patch(typeof(GameKeys), typeof(HotKeyManager), "Update", postfix: nameof(NoteGameTyping), done: "Trap Hub's keys wait while you type in the game's text boxes", consequence: "typing Trap Hub's keys in the game's item search may also open the window or check traps");
 
     public static bool IsShiftHeld() => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 

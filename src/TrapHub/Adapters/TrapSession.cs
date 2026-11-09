@@ -135,7 +135,7 @@ internal sealed class TrapSession
 
         // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
         // The window's key wins when both keys are the same and Shift is not part of the window's key. A key typed into
-        // one of the game's own text boxes (the item search), or into any mod's page, is text, not one of these keys.
+        // one of the game's text boxes (the item search), or into any mod's page, is text, not one of these keys.
         if (!_keyboard.IsClaimed && !GameKeys.IsGameTyping)
         {
             if (Hotkey.Fires(_panelKey != KeyCode.None, _isPanelKeyDown, IsTypingAnywhere))
@@ -513,7 +513,7 @@ internal sealed class TrapSession
 
     /// <summary>
     /// Check traps from any of its buttons or its key. Like the game's Tend Garden, a check that lined something up
-    /// shows the game's own popup ("Check x5"), at the press rather than after the walk.
+    /// shows the game's popup ("Check x5"), at the press rather than after the walk.
     /// </summary>
     private void Check(string name, int? onlyFloor)
     {
