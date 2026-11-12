@@ -68,7 +68,7 @@ public class TextsAndSoundsTests
     {
         Assert.Equal("Collecting from 3 traps on 1 floor.", TrapMessages.Describe(new TrapOutcome.Taking(3, 1, 0), isChinese: false));
         Assert.Equal("Collecting from 3 traps on 2 floors.", TrapMessages.Describe(new TrapOutcome.Taking(3, 2, 0), isChinese: false));
-        Assert.Equal("Baited 2 traps. 1 trap had no allowed bait left. The game refused 1 trap.", TrapMessages.Describe(new TrapOutcome.Baited(2, 1, 1), isChinese: false));
+        Assert.Equal("Baited 2 traps. 1 trap had no allowed bait left. The game would not let Trap Hub handle 1 trap.", TrapMessages.Describe(new TrapOutcome.Baited(2, 1, 1), isChinese: false));
         Assert.Equal("1 trap now uses Meat.", Texts.AssignedOwn.Say(false, 1, "Meat"));
         Assert.Equal("4 traps now use their type's default.", Texts.AssignedDefault.Say(false, 4));
         Assert.DoesNotContain(AllPhrases(), phrase => phrase.En.Contains("(s)"));

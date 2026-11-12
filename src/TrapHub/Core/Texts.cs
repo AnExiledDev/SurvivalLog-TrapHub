@@ -21,7 +21,7 @@ public static class Texts
     public static readonly Counted BaitedCount = new(new("Baited 1 trap.", "已为 {0} 个陷阱布饵。"), new("Baited {0} traps.", "已为 {0} 个陷阱布饵。"));
     public static readonly Counted AutoBaited = new(new("Auto re-bait: baited 1 trap.", "自动布饵：已为 {0} 个陷阱布饵。"), new("Auto re-bait: baited {0} traps.", "自动布饵：已为 {0} 个陷阱布饵。"));
     public static readonly Counted HadNoBait = new(new("1 trap had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。"), new("{0} traps had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。"));
-    public static readonly Counted GameRefused = new(new("The game refused 1 trap.", "游戏拒绝了 {0} 个陷阱。"), new("The game refused {0} traps.", "游戏拒绝了 {0} 个陷阱。"));
+    public static readonly Counted GameRefused = new(new("The game would not let Trap Hub handle 1 trap.", "游戏不允许 Trap Hub 处理 {0} 个陷阱。"), new("The game would not let Trap Hub handle {0} traps.", "游戏不允许 Trap Hub 处理 {0} 个陷阱。"));
     public static readonly Phrase BaitedOne = new("{0} baited with {1}.", "{0}已放置{1}作诱饵。");
     public static readonly Phrase NothingToBait = new("Every trap that can take bait has some.", "所有可布饵的陷阱都已有诱饵。");
     public static readonly Phrase AlreadyBaited = new("{0} already has bait.", "{0}已有诱饵。");
@@ -31,7 +31,7 @@ public static class Texts
     public static readonly Counted Taking = new(new("Collecting from 1 trap.", "正在从 {0} 个陷阱拾取猎物。"), new("Collecting from {0} traps on {1} floors.", "正在从 {0} 个陷阱拾取猎物（{1} 个楼层）。"));
     public static readonly Phrase TakingOneFloor = new("Collecting from {0} traps on 1 floor.", "正在从 {0} 个陷阱拾取猎物（1 个楼层）。");
     public static readonly Phrase NothingToTake = new("No catches to collect.", "没有可拾取的猎物。");
-    public static readonly Phrase AlreadyTaking = new("No new catches: {0} already queued.", "没有新的猎物：{0} 个已在队列中。");
+    public static readonly Phrase AlreadyTaking = new("No new catches to collect. Already queued: {0}.", "没有新的猎物可拾取。已在队列中：{0} 个。");
     public static readonly Phrase NothingToCheck = new("Nothing to check: no catches waiting and every trap that can take bait has some.", "无需巡查：没有待拾取的猎物，所有可布饵的陷阱都已有诱饵。");
     public static readonly Phrase CheckPop = new("Check x{0}", "巡查 \u00d7{0}");
     public static readonly Phrase Dismantling = new("Dismantling {0}.", "正在拆除{0}。");
@@ -82,23 +82,23 @@ public static class Texts
         ("catches", new("{0} catches left", "还能捕获 {0} 次")),
         ("breaks", new("Breaks on its next catch", "下次捕获后损坏")),
         ("store", new("Catches stored: {0}", "已储存的猎物：{0}")),
-        ("queued", new("Walk queued", "已排队")),
+        ("queued", new("Queued", "已排队")),
         ("take", new("Take", "拾取")),
         ("rebait", new("Re-bait", "布饵")),
         ("dismantle", new("Dismantle", "拆除")),
         ("confirm", new("Sure?", "确定？")),
         ("preset", new("Bait preset", "诱饵预设")),
-        ("typeDefault", new("Type default ({0})", "类型默认（{0}）")),
-        ("useDefault", new("Type default", "类型默认")),
+        ("typeDefault", new("Default ({0})", "默认（{0}）")),
+        ("useDefault", new("Default", "默认")),
         ("ownPick", new("Custom", "自定义")),
         ("none", new("None", "无")),
         ("empty", new("No traps placed at home yet.", "家里还没有放置陷阱。")),
         ("noMatch", new("No traps match.", "没有符合条件的陷阱。")),
         ("keepN", new("keep {0}", "保留 {0}")),
-        ("notTaken", new("This trap does not take it", "此陷阱不使用")),
+        ("notTaken", new("This trap can't use this bait", "此陷阱不能用这种诱饵")),
         ("oddsNow", new("Catch odds now", "当前捕获率")),
         ("otherPrey", new("Other prey", "其他猎物")),
-        ("nothing", new("Nothing", "空手而归")),
+        ("nothing", new("Nothing", "没有收获")),
         ("wear", new("Wear", "耐久")),
         ("needsYou", new("Needs you", "需要处理")),
         ("fAll", new("All", "全部")),
@@ -106,7 +106,7 @@ public static class Texts
         ("fBreaks", new("About to break", "即将损坏")),
         ("findTrap", new("Find a trap, room or prey", "查找陷阱、房间或猎物")),
         ("checkAll", new("Check all traps ({0})", "巡查所有陷阱（{0}）")),
-        ("checkNote", new("Collect {0}, then bait {1} from your bait presets.", "拾取 {0} 个猎物，再按诱饵预设布饵 {1} 个。")),
+        ("checkNote", new("Traps to collect from: {0}. Traps to bait: {1}.", "待拾取的陷阱：{0} 个。待布饵的陷阱：{1} 个。")),
         ("checkFloor", new("This floor only ({0})", "仅本层（{0}）")),
         ("takeOnly", new("Collect only ({0})", "只拾取（{0}）")),
         ("baitOnly", new("Bait only ({0})", "只布饵（{0}）")),
@@ -125,7 +125,7 @@ public static class Texts
         ("newPreset", new("New preset", "新建预设")),
         ("name", new("Name", "名称")),
         ("steps", new("Bait order", "诱饵顺序")),
-        ("stepsNote", new("Trap Hub uses the first bait you have more of than the number you keep.", "Trap Hub 会使用第一个数量多于保留数的诱饵。")),
+        ("stepsNote", new("Trap Hub uses the first bait in this list that you have more of than its Keep number.", "Trap Hub 会使用列表中第一个数量多于「保留」数的诱饵。")),
         ("noSteps", new("No baits yet. Add some below.", "还没有诱饵，请在下方添加。")),
         ("keep", new("Keep", "保留")),
         ("own", new("You have {0}", "你有 {0} 个")),
@@ -177,7 +177,7 @@ public static class Texts
         ("drawsIn", new("Attracts", "吸引的猎物")),
         ("takenByHead", new("Traps that take it", "适用陷阱")),
         ("sounds", new("Catch sounds", "捕获声音")),
-        ("soundsNote", new("The sound a trap plays while it holds a catch. Chime once plays it for a few seconds, then goes quiet.", "陷阱捕获猎物后发出的声音。「只响一次」会播放几秒后静音。")),
+        ("soundsNote", new("The sound a trap plays while it holds a catch. Chime once plays it for 3 seconds, then stops.", "陷阱捕获猎物后发出的声音。「只响一次」会播放 3 秒后停止。")),
         ("sCage", SoundCage),
         ("sNet", SoundNet),
         ("sOther", SoundOther),
@@ -201,7 +201,7 @@ public static class Texts
         ("hWornOut", new("worn out, repair or replace", "已损坏，请修理或更换")),
         ("hFull", new("full, collect to restart", "已满，拾取后继续")),
         ("hLeft", new("{0} left", "剩 {0} 次")),
-        ("hStored", new("Stored catch", "储物")),
+        ("hStored", new("Stored catch", "已储存的猎物")),
         ("hNextCheck", new("Next check:", "下次巡查：")),
         ("hPrey", new("{0} prey", "{0} 个猎物")),
         ("hToBait", new("{0} to bait", "{0} 个待布饵")),

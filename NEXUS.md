@@ -1,5 +1,5 @@
 Name: Trap Hub
-Summary: See every trap at home in one window, grouped by room, and check them all with one button in the game's trap list. It collects every catch, then baits every empty trap. Bait presets give each trap type or trap an ordered list of baits to fall back on, an allowed bait list keeps your food safe, and each trap shows its wear and catch odds.
+Summary: See every trap at home in one window, grouped by room, and check them all with one button in the game's trap list. It collects every catch, then baits every empty trap. Bait presets give each trap type, or a single trap, an ordered list of baits to fall back on, an allowed bait list keeps your food safe, and each trap shows its wear and catch odds.
 
 Description (BBCode):
 [center][img]https://sldb.core-directive.com/media/save/1-save-safe.png[/img][/center]
@@ -45,6 +45,7 @@ None known.
 [list=1]
 [*]Install [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i](if no other mods were installed before, start the game once so BepInEx finishes setup, then quit)[/i].[/*]
 [*]If Trapline is installed, delete [font=Courier New]Trapline.dll[/font] from the [font=Courier New]BepInEx\plugins[/font] folder.[/*]
+[*]Install [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] the same way: download its zip and extract it into the game folder.[/*]
 [*]Download the zip from the Files tab.[/*]
 [*]Extract it into the game folder (the folder with [font=Courier New]SurvivalLog.exe[/font]). The zip holds a BepInEx folder, so the DLL lands in the right place. When asked, merge the folders. The result should be:
 [code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\TrapHub.dll[/code][/*]
@@ -96,13 +97,14 @@ Trap Hub 包含 Trapline 的功能，两者请只装一个。安装前如已装�
 [list]
 [*]Survival Log 1.1.20719。游戏更新后模组可能暂时失效，直到模组更新为止。[/*]
 [*][url=https://www.nexusmods.com/survivallog/mods/12]BepInEx for Survival Log[/url]，请先安装。[/*]
-[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 或更新版本。没有它本模组不会加载。打字时它让 Trap Hub 的按键不起作用；窗口关闭时，它把 Trap Hub 的消息显示为弹出通知；它让在 Mod Manager 的模组界面修改的设置无需重启即可生效，它的界面大小设置还能调整窗口的大小。[/*]
+[*][url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url] 0.19.0 或更新版本。没有它本模组不会加载。打字时，它让 Trap Hub 的按键不起作用。窗口关闭时，它把 Trap Hub 的消息显示为弹出通知。在 Mod Manager 的「模组」界面修改的设置，也靠它无需重启即可生效。它的界面大小设置还能调整窗口的大小。[/*]
 [*]可选：[url=https://www.nexusmods.com/survivallog/mods/73]Mod Manager[/url]。装了它，可以在游戏里它的「模组」界面修改每项设置，并看到每项的说明，不用打开配置文件。[/*]
 [/list]
 
 [size=5]安装[/size]
 [list=1]
 [*]安装 [url=https://www.nexusmods.com/survivallog/mods/12]BepInEx[/url] [i]（如果之前没有装过其他模组，先启动一次游戏，让 BepInEx 完成初始化，然后退出）[/i]。[/*]
+[*]用同样的方式安装 [url=https://www.nexusmods.com/survivallog/mods/61]Exiled's Toolkit[/url]：下载它的压缩包并解压到游戏目录。[/*]
 [*]在「文件」页下载压缩包。[/*]
 [*]把压缩包解压到游戏目录（[font=Courier New]SurvivalLog.exe[/font] 所在的文件夹）。压缩包里带有 BepInEx 文件夹，DLL 会自动放到正确位置。如果提示合并文件夹，选择合并。解压后应为：
 [code]C:\Program Files (x86)\Steam\steamapps\common\Survival Log\BepInEx\plugins\TrapHub.dll[/code][/*]

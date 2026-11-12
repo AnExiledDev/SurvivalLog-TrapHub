@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.5
+
+- Clearer wording in the Trap Hub window, the messages and the settings, in English and Chinese.
+- Made for Survival Log 1.1.20719.
+
 ## 0.6.4
 
 - Clearer wording in the Trap Hub window, the Home Traps list, the settings and the mod's pages, in English and Chinese.
@@ -91,7 +96,7 @@
 - With no trap picked, the window lists the traps that need you. Press one to open it.
 - A trap's details show its bait preset, the bait order, the catch odds and its wear in one place.
 - The allowed bait tab shows the bait you own first, quick picks (every bait in your presets, every universal bait you own) and, for each bait, what it attracts, which traps take it and which presets use it.
-- The window responds faster. Picking a trap or a bait no longer redraws the whole window, and each refresh sends far less to the game's web view.
+- The window responds faster, since picking a trap or a bait no longer redraws the whole window.
 - After a game update, Mod Manager can tell you if this mod may need an update.
 
 ## 0.1.1

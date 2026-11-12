@@ -22,7 +22,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.4";
+    private const string Version = "0.6.5";
 
     /// <summary>Exiled's Toolkit: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -41,7 +41,7 @@ public sealed class Plugin : BasePlugin
 
         var panelKey = Config.Bind("General", "PanelKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
             "Key that opens and closes the Trap Hub window, used with Shift while PanelKeyShift is true. Unbound by default: the trap button in the HUD's tool column opens the window. Set a key here to open it from the keyboard too.\n" +
-            "打开和关闭 Trap Hub 窗口的按键；PanelKeyShift 为 true 时需同时按住 Shift。默认不绑定：HUD 工具栏中的陷阱按钮可以打开窗口。在这里设置按键后，也可以用键盘打开。");
+            "打开和关闭 Trap Hub 窗口的按键。PanelKeyShift 为 true 时需同时按住 Shift。默认不绑定：HUD 工具栏中的陷阱按钮可以打开窗口。在这里设置按键后，也可以用键盘打开。");
         var panelKeyShift = Config.Bind("General", "PanelKeyShift", true,
             "When true, the window opens with Shift and PanelKey together, so PanelKey alone is free for Check traps. Set it to false to open the window with PanelKey alone.\n" +
             "设为 true 时，需同时按住 Shift 和 PanelKey 才会打开窗口，单按 PanelKey 留给巡查陷阱。设为 false 则单按 PanelKey 即可打开窗口。");
