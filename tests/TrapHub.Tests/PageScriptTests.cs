@@ -201,6 +201,28 @@ public class PageScriptTests
         Assert.Equal(new[] { new BaitStep(Meat, 1) }, edit.Preset.Steps);
     }
 
+    /// <summary>
+    /// The Default for row holds a whole box of trap chips. Laid out like the other setting rows, the chips took the
+    /// full width and squeezed the label to nothing, so the trap names covered it.
+    /// </summary>
+    [Fact]
+    public void The_default_for_label_keeps_its_width_beside_the_trap_chips()
+    {
+        var page = Opened();
+
+        ShowTab(page, "bait");
+
+        var css = page.Text("document.getElementById('th-style').textContent");
+        const string row = "panelButtons('deftype')[0].closest('.th-setrow')";
+
+        Assert.True(page.Is($"{row}.classList.contains('th-chiprow')"));
+        Assert.Equal("Default for", page.Text($"{row}.querySelector('.th-lbl').firstChild.textContent"));
+        Assert.Equal("1", page.Text("panel().querySelectorAll('.th-chiprow').length"));
+        Assert.Contains(".th-setrow.th-chiprow .th-lbl{flex:none}", css);
+        Assert.Contains(".th-setrow.th-chiprow .th-lbl b{white-space:nowrap}", css);
+        Assert.Contains(".th-setrow.th-chiprow .th-chips{flex:1;min-width:0;margin:0}", css);
+    }
+
     [Fact]
     public void A_refresh_while_typing_waits_until_the_box_loses_focus()
     {

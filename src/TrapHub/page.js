@@ -233,8 +233,8 @@
     return head;
   }
 
-  function setRow(label, note, control) {
-    return put(el('div', 'th-setrow'), put(el('div', 'th-lbl'), el('b', '', label), note ? el('small', '', note) : null), control);
+  function setRow(label, note, control, extraClass) {
+    return put(el('div', 'th-setrow' + (extraClass ? ' ' + extraClass : '')), put(el('div', 'th-lbl'), el('b', '', label), note ? el('small', '', note) : null), control);
   }
 
   function kv(grid, key, value) {
@@ -357,6 +357,7 @@
     '.th-pchips{display:flex;gap:6px;flex-wrap:wrap}.th-pchip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:2px 8px 2px 2px;border-radius:3px;background:rgba(0,0,0,.2)}',
     '.th-setrow{display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:3px;background:var(--cf);margin-bottom:6px}',
     '.th-lbl{flex:1;min-width:0}.th-lbl b{display:block;font-size:14px;font-weight:600;color:#fff}.th-lbl small{display:block;font-size:12px;color:var(--t3);margin-top:2px}',
+    '.th-setrow.th-chiprow .th-lbl{flex:none}.th-setrow.th-chiprow .th-lbl b{white-space:nowrap}.th-setrow.th-chiprow .th-chips{flex:1;min-width:0;margin:0}',
     '.th-icon{flex:none;display:flex;align-items:center;justify-content:center;border-radius:3px;background:rgba(0,0,0,.25);overflow:hidden;color:var(--t2);font-weight:600}',
     '.th-icon img{width:100%;height:100%;object-fit:contain}',
     '.th-i56{width:64px;height:64px;font-size:22px}.th-i44{width:46px;height:46px;font-size:16px}.th-i30{width:30px;height:30px;font-size:12px}.th-i22{width:22px;height:22px;font-size:11px}.th-i18{width:18px;height:18px;font-size:10px}',
@@ -1213,7 +1214,7 @@
       setRow(say('source'), null, segment([['bag', say('srcBag')], ['home', say('srcHome')]], d.source, 'source')),
       setRow(say('spoilFirst'), null, switchButton(d.spoilFirst, 'spoil')),
       setRow(say('auto'), say('autoNote'), segment(AUTOS.map(function (a) { return [a[0], say(a[1])]; }), d.auto, 'autoset')),
-      setRow(say('defaultFor'), null, typeChips(d)));
+      setRow(say('defaultFor'), null, typeChips(d), 'th-chiprow'));
     fillUses(editor);
   }
 
