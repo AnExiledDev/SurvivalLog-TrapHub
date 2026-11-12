@@ -22,7 +22,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.3";
+    private const string Version = "0.6.4";
 
     /// <summary>Exiled's Toolkit: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -46,11 +46,11 @@ public sealed class Plugin : BasePlugin
             "When true, the window opens with Shift and PanelKey together, so PanelKey alone is free for Check traps. Set it to false to open the window with PanelKey alone.\n" +
             "设为 true 时，需同时按住 Shift 和 PanelKey 才会打开窗口，单按 PanelKey 留给巡查陷阱。设为 false 则单按 PanelKey 即可打开窗口。");
         var checkKey = Config.Bind("General", "CheckKey", Enum.Parse<KeyCode>(Hotkey.DefaultKey),
-            "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. Unbound by default: the Check traps button in the HUD's trap panel does the same. Set a key here to check traps from the keyboard too.\n" +
-            "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认不绑定：HUD 陷阱面板中的巡查按钮可以做同样的事。在这里设置按键后，也可以用键盘巡查。");
+            "Key that checks every trap at once: collects every catch, then baits every empty trap from its preset. Unbound by default: the Check traps button in the HUD's Home Traps list does the same. Set a key here to check traps from the keyboard too.\n" +
+            "一键巡查所有陷阱的按键：先拾取所有猎物，再按预设为空陷阱布饵。默认不绑定：HUD 家中陷阱列表里的巡查按钮可以做同样的事。在这里设置按键后，也可以用键盘巡查。");
         var rebaitOnCheck = Config.Bind("General", "RebaitOnCheck", true,
-            "When true, Check traps also baits every trap it empties, in the same trip. When false, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's trap panel sets this too.\n" +
-            "设为 true 时，巡查陷阱会在同一趟中为拾取后的陷阱补饵。设为 false 时，只为本来就空着的陷阱布饵。HUD 陷阱面板中巡查按钮旁的「布饵」勾选框也会修改此项。");
+            "When true, Check traps also baits every trap it empties, in the same trip. When false, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's Home Traps list sets this too.\n" +
+            "设为 true 时，巡查陷阱会在同一趟中为拾取后的陷阱补饵。设为 false 时，只为本来就空着的陷阱布饵。HUD 家中陷阱列表里巡查按钮旁的「布饵」勾选框也会修改此项。");
         var sounds = new Dictionary<SoundGroup, ConfigEntry<string>>
         {
             [SoundGroup.LiveCaptureCage] = BindSound("LiveCaptureCage", "the Live Capture Cage", "「活捉笼」"),
@@ -115,7 +115,7 @@ public sealed class Plugin : BasePlugin
 
     private ConfigEntry<string> BindSound(string key, string englishTrap, string chineseTrap) =>
         Config.Bind("Sounds", key, Sounds.ModeName(SoundMode.Normal), new ConfigDescription(
-            $"The sound {englishTrap} makes while it holds a catch. Normal: as the game plays it. Once: plays for 3 seconds, then stops. Muted: never plays. Not used while Quiet Traps is installed.\n" +
-            $"{chineseTrap}捕获猎物后发出的声音。Normal：按游戏原样播放。Once：播放 3 秒后停止。Muted：不播放。安装了 Quiet Traps 时不生效。",
+            $"The sound {englishTrap} makes while it holds a catch. Normal: plays like it normally does. Once: plays for 3 seconds, then stops. Muted: never plays. Not used while Quiet Traps is installed.\n" +
+            $"{chineseTrap}捕获猎物后发出的声音。Normal：正常播放。Once：播放 3 秒后停止。Muted：不播放。安装了 Quiet Traps 时不生效。",
             new AcceptableValueList<string>(Sounds.ModeNames.ToArray())));
 }

@@ -20,8 +20,8 @@ public static class Texts
     public static readonly Phrase Gone = new("That trap is gone.", "这个陷阱已经不在了。");
     public static readonly Counted BaitedCount = new(new("Baited 1 trap.", "已为 {0} 个陷阱布饵。"), new("Baited {0} traps.", "已为 {0} 个陷阱布饵。"));
     public static readonly Counted AutoBaited = new(new("Auto re-bait: baited 1 trap.", "自动布饵：已为 {0} 个陷阱布饵。"), new("Auto re-bait: baited {0} traps.", "自动布饵：已为 {0} 个陷阱布饵。"));
-    public static readonly Phrase HadNoBait = new("{0} had no allowed bait left.", "{0} 个没有可用的允许诱饵。");
-    public static readonly Phrase GameRefused = new("The game refused {0}.", "游戏拒绝了 {0} 个。");
+    public static readonly Phrase HadNoBait = new("{0} trap(s) had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。");
+    public static readonly Phrase GameRefused = new("The game refused {0} trap(s).", "游戏拒绝了 {0} 个陷阱。");
     public static readonly Phrase BaitedOne = new("{0} baited with {1}.", "{0}已放置{1}作诱饵。");
     public static readonly Phrase NothingToBait = new("Every trap that can take bait has some.", "所有可布饵的陷阱都已有诱饵。");
     public static readonly Phrase AlreadyBaited = new("{0} already has bait.", "{0}已有诱饵。");
@@ -73,14 +73,14 @@ public static class Texts
         ("stArmed", new("Armed", "已布置")),
         ("stPrey", new("Prey", "有猎物")),
         ("stNoBait", new("No bait", "未布饵")),
-        ("stHalted", new("Halted", "停工")),
+        ("stHalted", new("Full", "已满")),
         ("caught", new("Caught: {0}", "已捕获：{0}")),
         ("next", new("Re-bait uses: {0}", "布饵将使用：{0}")),
-        ("nextShort", new("Empty, next: {0}", "空置，下一个：{0}")),
+        ("nextShort", new("Empty, will use {0}", "空置，将使用{0}")),
         ("nextNone", new("No allowed bait left for its preset", "该预设没有可用的允许诱饵")),
         ("catches", new("{0} catches left", "还能捕获 {0} 次")),
         ("breaks", new("Breaks on its next catch", "下次捕获后损坏")),
-        ("store", new("Store: {0}", "储物：{0}")),
+        ("store", new("Catches stored: {0}", "已储存的猎物：{0}")),
         ("queued", new("Walk queued", "已排队")),
         ("take", new("Take", "拾取")),
         ("rebait", new("Re-bait", "布饵")),
@@ -89,7 +89,7 @@ public static class Texts
         ("preset", new("Bait preset", "诱饵预设")),
         ("typeDefault", new("Type default ({0})", "类型默认（{0}）")),
         ("useDefault", new("Type default", "类型默认")),
-        ("ownPick", new("Picked for it", "单独指定")),
+        ("ownPick", new("Custom", "自定义")),
         ("none", new("None", "无")),
         ("empty", new("No traps placed at home yet.", "家里还没有放置陷阱。")),
         ("noMatch", new("No traps match.", "没有符合条件的陷阱。")),
@@ -124,10 +124,10 @@ public static class Texts
         ("newPreset", new("New preset", "新建预设")),
         ("name", new("Name", "名称")),
         ("steps", new("Bait order", "诱饵顺序")),
-        ("stepsNote", new("Trap Hub uses the first one you have more of than you keep.", "使用第一个数量多于保留数的诱饵。")),
+        ("stepsNote", new("Trap Hub uses the first bait you have more of than the number you keep.", "Trap Hub 会使用第一个数量多于保留数的诱饵。")),
         ("noSteps", new("No baits yet. Add some below.", "还没有诱饵，请在下方添加。")),
         ("keep", new("Keep", "保留")),
-        ("own", new("Own {0}", "拥有 {0}")),
+        ("own", new("You have {0}", "你有 {0} 个")),
         ("notAllowed", new("Not allowed, skipped", "未允许，跳过")),
         ("lastResort", new("Then any allowed universal bait", "最后使用任意允许的广谱诱饵")),
         ("rules", new("Rules", "规则")),
@@ -139,7 +139,7 @@ public static class Texts
         ("autoOff", new("Off", "关闭")),
         ("autoNearby", new("On my floor", "在我所在楼层")),
         ("autoAlways", new("Always", "始终")),
-        ("autoNote", new("Puts bait in an empty trap by itself, from this preset, without a walk.", "自动从此预设为空陷阱放置诱饵，无需走过去。")),
+        ("autoNote", new("Baits empty traps from this preset without you walking over to them.", "自动用此预设为空陷阱布饵，不用走过去。")),
         ("defaultFor", new("Default for", "默认用于")),
         ("save", new("Save", "保存")),
         ("delete", new("Delete", "删除")),
@@ -173,8 +173,8 @@ public static class Texts
         ("presetStep", new("{0}, step {1}", "{0}，第 {1} 步")),
         ("skipped", new("Skipped while blocked", "禁止期间会被跳过")),
         ("notInPresets", new("Not in any preset.", "不在任何预设中。")),
-        ("drawsIn", new("Draws in", "吸引的猎物")),
-        ("takenByHead", new("Taken by", "适用陷阱")),
+        ("drawsIn", new("Attracts", "吸引的猎物")),
+        ("takenByHead", new("Traps that take it", "适用陷阱")),
         ("sounds", new("Catch sounds", "捕获声音")),
         ("soundsNote", new("The sound a trap plays while it holds a catch. Chime once plays it for a few seconds, then goes quiet.", "陷阱捕获猎物后发出的声音。「只响一次」会播放几秒后静音。")),
         ("sCage", SoundCage),
@@ -191,7 +191,7 @@ public static class Texts
         ("keyWindowNote", new("Change the keys in the mod config: PanelKey, PanelKeyShift and CheckKey.", "在模组配置中修改按键：PanelKey、PanelKeyShift 和 CheckKey。")),
         ("keyOff", new("Off", "未设置")),
         ("footWindow", new("this window", "此窗口")),
-        ("keyNone", new("No key is set; use the trap button on the left of the screen.", "未设置按键；请使用屏幕左侧的陷阱按钮。")),
+        ("keyNone", new("No key is set. Use the trap button on the left of the screen.", "未设置按键。请使用屏幕左侧的陷阱按钮。")),
         ("presetFile", new("Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.", "预设和允许的诱饵保存在 BepInEx/config/trap-hub.json，所有存档共用。")),
         ("escClose", new("Esc to close", "Esc 关闭")),
         ("tip", new("Your traps: catches, bait and wear", "你的陷阱：猎物、诱饵和耐久")),
@@ -210,10 +210,10 @@ public static class Texts
         ("hRebaitOn", new("RE-BAIT IS ON", "布饵已开启")),
         ("hRefill", new("Refill traps you empty", "为拾取后的陷阱补饵")),
         ("hRefillWith", new("refill with", "补饵：")),
-        ("hFoot", new("{0} traps on {1} floors, this floor first", "{1} 个楼层的 {0} 个陷阱，先本层")),
+        ("hFoot", new("{0} traps on {1} floors, starting with this floor", "{1} 个楼层的 {0} 个陷阱，从本层开始")),
         ("hIdle", new("Nothing to check: every trap is armed and baited.", "无需巡查：所有陷阱都已布置并有诱饵。")),
-        ("hSkipBreaks", new("{0}, {1} breaks on its next catch, so it is emptied but not re-baited.", "{1}的{0}下次捕获就会损坏，只拾取不补饵。")),
-        ("hSkipNoBait", new("{0}, {1} has no bait left, so it is skipped.", "{1}的{0}没有可用诱饵，将被跳过。")),
+        ("hSkipBreaks", new("{0} in {1} breaks on its next catch, so it is emptied but not re-baited.", "{1}的{0}下次捕获就会损坏，只拾取不补饵。")),
+        ("hSkipNoBait", new("{0} in {1} has no bait left, so it is skipped.", "{1}的{0}没有可用诱饵，将被跳过。")),
         ("hSkipMore", new("{0} more skipped.", "另有 {0} 个被跳过。")),
         ("hRebaitAll", new("Re-bait traps", "陷阱补饵")),
         ("hFillFoot", new("Traps getting bait now: {0}. Catches stay in the traps.", "现在布饵的陷阱：{0} 个。猎物留在陷阱里。")),

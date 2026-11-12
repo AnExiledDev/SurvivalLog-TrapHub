@@ -13,7 +13,7 @@ namespace TrapHub.Adapters;
 /// The catch sounds, as Quiet Traps handles them, with one more choice: a sound set to chime once plays for a few
 /// seconds and is then stopped. Hooks the two FmodManager calls a catch sound goes through, and FMOD's own
 /// createInstance and start, which a model's sound passes through without FmodManager. Not applied at all when Quiet
-/// Traps is installed. Every hook swallows its own exceptions: a sound must never be the crash.
+/// Traps is installed. Every hook catches its own exceptions, so a sound can never crash the game.
 /// </summary>
 internal static class SoundGate
 {

@@ -16,12 +16,12 @@ internal static class GameKeys
 
     public static bool IsShiftHeld() => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
-    /// <summary>The game is taking typed text in one of its own menus, such as the item search, so letter keys are words, not hotkeys.</summary>
+    /// <summary>The game is taking typed text in one of its menus, such as the item search, so letter keys type text there instead of acting as hotkeys.</summary>
     public static bool IsGameTyping { get; private set; }
 
     /// <summary>
-    /// A postfix, so it runs on every frame, also while the Toolkit holds the game's hotkeys back. A field read and no
-    /// call.
+    /// A postfix, so it runs on every frame, also while the Toolkit holds the game's hotkeys back. It only reads a field and calls
+    /// nothing.
     /// </summary>
     private static void NoteGameTyping(HotKeyManager __instance) => IsGameTyping = __instance != null && __instance._isTextInputActive;
 }

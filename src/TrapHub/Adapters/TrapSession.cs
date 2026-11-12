@@ -308,7 +308,7 @@ internal sealed class TrapSession
             return;
         }
 
-        // Without Exiled's Toolkit a changed setting is not applied again on its own, so the new mode is applied here too.
+        // Exiled's Toolkit applies the saved setting at the next frame. The new mode is applied here too so it works at once.
         _saveSound(group, mode);
         _sounds = new Dictionary<SoundGroup, SoundMode>(_sounds) { [group] = mode };
         _settings = null;

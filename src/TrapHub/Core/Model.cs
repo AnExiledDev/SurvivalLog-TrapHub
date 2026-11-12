@@ -58,7 +58,7 @@ public sealed record Trap(
 /// <summary>One stack of a bait item the player owns, in the bag or in home storage. HoursLeft is null for food that never spoils.</summary>
 public sealed record BaitUnit(long InstanceId, int ItemId, int Count, bool IsInBag, int? HoursLeft);
 
-/// <summary>A bait item, with the multiplier it gives each prey (a prey it does not name gets 1, as in the game).</summary>
+/// <summary>A bait item, with the multiplier it gives each prey (a prey it does not name gets 1, the same as the game).</summary>
 public sealed record BaitItem(int Id, string Name, string? Icon, BaitKind Kind, IReadOnlyDictionary<int, float> Coefficients)
 {
     public float CoefficientFor(int preyId) => Coefficients.TryGetValue(preyId, out var coefficient) ? coefficient : 1f;

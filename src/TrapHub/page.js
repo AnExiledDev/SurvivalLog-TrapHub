@@ -52,10 +52,10 @@
   // The plugin hands over the words in the game's language before every call (Texts.cs); English stands in until then.
   var ENGLISH = {
     tabTraps: 'Traps', tabBait: 'Bait', tabSettings: 'Settings', nTrap: '1 trap', nTraps: '{0} traps', sumNeed: '{0} need you',
-    floor: 'Floor {0}', here: 'You are here', stArmed: 'Armed', stPrey: 'Prey', stNoBait: 'No bait', stHalted: 'Halted', caught: 'Caught: {0}',
-    next: 'Re-bait uses: {0}', nextShort: 'Empty, next: {0}', nextNone: 'No allowed bait left for its preset', catches: '{0} catches left',
-    breaks: 'Breaks on its next catch', store: 'Store: {0}', queued: 'Walk queued', take: 'Take', rebait: 'Re-bait', dismantle: 'Dismantle',
-    confirm: 'Sure?', preset: 'Bait preset', typeDefault: 'Type default ({0})', useDefault: 'Type default', ownPick: 'Picked for it', none: 'None',
+    floor: 'Floor {0}', here: 'You are here', stArmed: 'Armed', stPrey: 'Prey', stNoBait: 'No bait', stHalted: 'Full', caught: 'Caught: {0}',
+    next: 'Re-bait uses: {0}', nextShort: 'Empty, will use {0}', nextNone: 'No allowed bait left for its preset', catches: '{0} catches left',
+    breaks: 'Breaks on its next catch', store: 'Catches stored: {0}', queued: 'Walk queued', take: 'Take', rebait: 'Re-bait', dismantle: 'Dismantle',
+    confirm: 'Sure?', preset: 'Bait preset', typeDefault: 'Type default ({0})', useDefault: 'Type default', ownPick: 'Custom', none: 'None',
     empty: 'No traps placed at home yet.', noMatch: 'No traps match.', keepN: 'keep {0}', notTaken: 'This trap does not take it',
     oddsNow: 'Catch odds now', otherPrey: 'Other prey', nothing: 'Nothing', wear: 'Wear', needsYou: 'Needs you', fAll: 'All',
     allFine: 'All your traps are armed and baited.', fBreaks: 'About to break', findTrap: 'Find a trap, room or prey',
@@ -64,10 +64,10 @@
     tNoBaitLeftSub: 'Allow more bait, or add some to its preset', tBreaks: 'Breaks soon', back: 'Back', thisTrap: 'This trap',
     nextBait: 'Next bait', inTrap: 'In the trap', noSaveYet: 'Save the game once to pick presets per trap.', tabPresets: 'Bait presets',
     typeUses: 'Each trap type uses', newPreset: 'New preset', name: 'Name', steps: 'Bait order',
-    stepsNote: 'Trap Hub uses the first one you have more of than you keep.', noSteps: 'No baits yet. Add some below.', keep: 'Keep',
-    own: 'Own {0}', notAllowed: 'Not allowed, skipped', lastResort: 'Then any allowed universal bait', rules: 'Rules', source: 'Take bait from',
+    stepsNote: 'Trap Hub uses the first bait you have more of than the number you keep.', noSteps: 'No baits yet. Add some below.', keep: 'Keep',
+    own: 'You have {0}', notAllowed: 'Not allowed, skipped', lastResort: 'Then any allowed universal bait', rules: 'Rules', source: 'Take bait from',
     srcBag: 'Bag only', srcHome: 'Bag, then home storage', spoilFirst: 'Use the food closest to spoiling first', auto: 'Auto re-bait',
-    autoOff: 'Off', autoNearby: 'On my floor', autoAlways: 'Always', autoNote: 'Puts bait in an empty trap by itself, from this preset, without a walk.',
+    autoOff: 'Off', autoNearby: 'On my floor', autoAlways: 'Always', autoNote: 'Baits empty traps from this preset without you walking over to them.',
     defaultFor: 'Default for', save: 'Save', delete: 'Delete', addBait: 'Add a bait', search: 'Search', usedBy: 'Traps using it',
     usedNone: 'No trap uses this preset yet.', more: '{0} more. Search to narrow the list.', unsaved: 'Unsaved changes', tabAllowed: 'Allowed bait',
     allowedNote: 'Trap Hub only puts bait you allow here in your traps. Everything starts blocked.', fOwned: 'I own', fAllowed: 'Allowed',
@@ -75,16 +75,16 @@
     kBalanced: 'Balanced', kOther: 'Other', allowPresets: 'Allow everything in my presets', allowUniversal: 'Allow universal bait I own',
     allowShown: 'Allow all shown', blockShown: 'Block all shown', allowed: 'Allowed', blocked: 'Blocked', allow: 'Allow', block: 'Block',
     noBaitMatch: 'No bait matches these filters.', inPresets: 'In your presets', presetStep: '{0}, step {1}', skipped: 'Skipped while blocked',
-    notInPresets: 'Not in any preset.', drawsIn: 'Draws in', takenByHead: 'Taken by', sounds: 'Catch sounds',
+    notInPresets: 'Not in any preset.', drawsIn: 'Attracts', takenByHead: 'Traps that take it', sounds: 'Catch sounds',
     soundsNote: 'The sound a trap plays while it holds a catch. Chime once plays it for a few seconds, then goes quiet.', sCage: 'Live Capture Cage',
     sNet: 'Simple Bird Net', sOther: 'Mousetrap, Iron Animal Trap, Auto Trap Cage', mNormal: 'Normal', mOnce: 'Chime once', mMuted: 'Muted',
     quietTraps: 'Quiet Traps is installed, so it handles catch sounds.', keys: 'Keys', keyCheck: 'Check traps',
     keyCheckNote: 'Collects every catch, then baits every empty trap from its bait preset.', keyWindow: 'Open Trap Hub',
     keyWindowNote: 'Change the keys in the mod config: PanelKey, PanelKeyShift and CheckKey.', keyOff: 'Off', footWindow: 'this window',
-    keyNone: 'No key is set; use the trap button on the left of the screen.',
+    keyNone: 'No key is set. Use the trap button on the left of the screen.',
     presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', escClose: 'Esc to close',
     tip: 'Your traps: catches, bait and wear',
-    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, this floor first', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0}, {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0}, {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.',
+    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, starting with this floor', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0} in {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0} in {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.',
     hRebaitAll: 'Re-bait traps', hFillFoot: 'Traps getting bait now: {0}. Catches stay in the traps.',
     hFillIdle: 'Nothing to re-bait: every trap that takes bait has some.', hFillNone: 'Traps with no bait left to use: {0}.'
   };
@@ -2024,7 +2024,7 @@
     return tip;
   }
 
-  // "5 traps on 4 floors, this floor first" with both numbers bold, whichever order the language puts them in.
+  // "5 traps on 4 floors, starting with this floor" with both numbers bold, whichever order the language puts them in.
   function fillFoot(doc, foot, touched, floors) {
     foot.textContent = '';
 

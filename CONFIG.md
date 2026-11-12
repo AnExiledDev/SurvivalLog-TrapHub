@@ -9,13 +9,13 @@ Bait presets, the allowed bait list and each trap's own preset are not in this f
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `PanelKey` | `None` | Opens and closes the Trap Hub window, pressed with Shift while `PanelKeyShift` is `true`. Unbound by default: the trap button in the tool column on the left of the screen opens the window. Set a key here to open it from the keyboard too. |
-| `PanelKeyShift` | `true` | When `true`, the window opens with Shift and `PanelKey`, so the same key alone can be `CheckKey`. When `false`, `PanelKey` alone opens the window; if it is the same key as `CheckKey`, that key opens the window instead of checking traps. |
+| `PanelKeyShift` | `true` | When `true`, the window opens with Shift and `PanelKey`, so the same key alone can be `CheckKey`. When `false`, `PanelKey` alone opens the window. If it is the same key as `CheckKey`, that key opens the window instead of checking traps. |
 | `CheckKey` | `None` | Checks every trap at once: collects every catch, then baits every empty trap from its bait preset. Unbound by default: the Check traps button in the HUD's Home Traps list does the same. Set a key here to check traps from the keyboard too. |
 | `RebaitOnCheck` | `true` | When `true`, Check traps also baits every trap it empties, in the same trip. When `false`, it baits only traps that are already empty. The Re-bait box beside the Check traps button in the HUD's Home Traps list sets this too. |
 
 ## Sounds
 
-The sound a trap plays while it holds a catch. `Normal` plays it as the game does, `Once` plays it for 3 seconds and then stops, `Muted` never plays it. These are also in the window's Settings tab. While Quiet Traps is installed, these settings are not used.
+The sound a trap plays while it holds a catch. `Normal` plays it like it normally does, `Once` plays it for 3 seconds and then stops, and `Muted` never plays it. These are also in the window's Settings tab. While Quiet Traps is installed, these settings are not used.
 
 | Setting | Default | Traps |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ The sound a trap plays while it holds a catch. `Normal` plays it as the game doe
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `UiScale` | `0` | How big Trap Hub's own windows, panels and messages are drawn, in percent, from 75 to 200. At `0` they follow the UI size set in Exiled's Toolkit (its `UiScale`). |
+| `UiScale` | `0` | The size of Trap Hub's windows, panels and messages, in percent, from 75 to 200. At `0` they use the UI size set in Exiled's Toolkit (its `UiScale`). |
 
 ## Diagnostics
 

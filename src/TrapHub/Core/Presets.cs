@@ -58,7 +58,7 @@ public sealed record PresetBook(
 
     public BaitPreset? Find(string? presetId) => presetId == null ? null : Presets.FirstOrDefault(preset => preset.Id == presetId);
 
-    /// <summary>The trap's own choice in this save, else its type's default; null when neither names a preset that exists.</summary>
+    /// <summary>The preset picked for this trap in this save, else its type's default; null when neither names a preset that exists.</summary>
     public BaitPreset? PresetFor(string? saveKey, Trap trap) => Find(OverrideFor(saveKey, trap.Id)) ?? Find(TypeDefaults.TryGetValue(trap.TypeId, out var id) ? id : null);
 
     public string? OverrideFor(string? saveKey, long trapId) =>
