@@ -4,7 +4,7 @@
 
 - Clearer wording in the Trap Hub window, the Home Traps list, the settings and the mod's pages, in English and Chinese.
 - A full Auto Trap Cage now shows as "Full" in the Trap Hub window, the same as in the Home Traps list.
-- In the preset editor's list of traps using a preset, a trap picked for that preset by hand now shows "Custom" instead of "Picked for it".
+- In the preset editor's list of traps using a preset, a trap picked for that preset by hand now shows "Custom".
 - Messages and the Check traps tip now say "1 trap" and "1 floor" where they said "trap(s)" or "1 floors".
 - Made for Survival Log 1.1.20719.
 
