@@ -52,11 +52,26 @@ public class TextsAndSoundsTests
     [Fact]
     public void Both_languages_fill_in_the_same_blanks()
     {
-        foreach (var phrase in AllPhrases().Where(p => !p.En.StartsWith("Baited 1", StringComparison.Ordinal) && !p.En.StartsWith("Auto re-bait: baited 1", StringComparison.Ordinal) && !p.En.StartsWith("Collecting from 1", StringComparison.Ordinal) && !p.En.StartsWith("1 bait", StringComparison.Ordinal)))
+        // The English for one writes "1" out, while the Chinese uses the same {0} for every count.
+        var ones = typeof(Texts).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(field => field.GetValue(null)).OfType<Counted>().Select(counted => counted.One).ToHashSet();
+
+        foreach (var phrase in AllPhrases())
         {
-            Assert.True(phrase.En.Contains("{0}") == phrase.Zh.Contains("{0}"), phrase.En);
+            if (!ones.Contains(phrase)) Assert.True(phrase.En.Contains("{0}") == phrase.Zh.Contains("{0}"), phrase.En);
             Assert.True(phrase.En.Contains("{1}") == phrase.Zh.Contains("{1}"), phrase.En);
         }
+    }
+
+    [Fact]
+    public void Counts_of_one_read_as_one_never_as_s_in_brackets()
+    {
+        Assert.Equal("Collecting from 3 traps on 1 floor.", TrapMessages.Describe(new TrapOutcome.Taking(3, 1, 0), isChinese: false));
+        Assert.Equal("Collecting from 3 traps on 2 floors.", TrapMessages.Describe(new TrapOutcome.Taking(3, 2, 0), isChinese: false));
+        Assert.Equal("Baited 2 traps. 1 trap had no allowed bait left. The game refused 1 trap.", TrapMessages.Describe(new TrapOutcome.Baited(2, 1, 1), isChinese: false));
+        Assert.Equal("1 trap now uses Meat.", Texts.AssignedOwn.Say(false, 1, "Meat"));
+        Assert.Equal("4 traps now use their type's default.", Texts.AssignedDefault.Say(false, 4));
+        Assert.DoesNotContain(AllPhrases(), phrase => phrase.En.Contains("(s)"));
     }
 
     [Fact]

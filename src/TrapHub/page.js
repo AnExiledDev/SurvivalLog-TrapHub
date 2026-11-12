@@ -84,7 +84,7 @@
     keyNone: 'No key is set. Use the trap button on the left of the screen.',
     presetFile: 'Presets and allowed bait are kept in BepInEx/config/trap-hub.json, shared by every save.', escClose: 'Esc to close',
     tip: 'Your traps: catches, bait and wear',
-    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, starting with this floor', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0} in {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0} in {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.',
+    hEmpty: 'empty, will use', hNoBait: 'empty, no bait left', hWornOut: 'worn out, repair or replace', hFull: 'full, collect to restart', hLeft: '{0} left', hStored: 'Stored catch', hNextCheck: 'Next check:', hPrey: '{0} prey', hToBait: '{0} to bait', hWorn: '{0} about to break', hCollect: 'Collect {0}', hBaitWith: 'Bait with {0}', hRebaitOn: 'RE-BAIT IS ON', hRefill: 'Refill traps you empty', hRefillWith: 'refill with', hFoot: '{0} traps on {1} floors, starting with this floor', hFootOneFloor: '{0} traps on 1 floor', hFootOne: '1 trap', hIdle: 'Nothing to check: every trap is armed and baited.', hSkipBreaks: '{0} in {1} breaks on its next catch, so it is emptied but not re-baited.', hSkipNoBait: '{0} in {1} has no bait left, so it is skipped.', hSkipMore: '{0} more skipped.',
     hRebaitAll: 'Re-bait traps', hFillFoot: 'Traps getting bait now: {0}. Catches stay in the traps.',
     hFillIdle: 'Nothing to re-bait: every trap that takes bait has some.', hFillNone: 'Traps with no bait left to use: {0}.'
   };
@@ -2025,10 +2025,11 @@
   }
 
   // "5 traps on 4 floors, starting with this floor" with both numbers bold, whichever order the language puts them in.
+  // One floor or one trap gets its own line, so it never reads "1 floors".
   function fillFoot(doc, foot, touched, floors) {
     foot.textContent = '';
 
-    say('hFoot').split(/(\{[01]\})/).forEach(function (part) {
+    say(touched === 1 ? 'hFootOne' : floors === 1 ? 'hFootOneFloor' : 'hFoot').split(/(\{[01]\})/).forEach(function (part) {
       if (part === '{0}') foot.appendChild(make(doc, 'b', '', String(touched)));
       else if (part === '{1}') foot.appendChild(make(doc, 'b', '', String(floors)));
       else if (part) foot.appendChild(doc.createTextNode(part));

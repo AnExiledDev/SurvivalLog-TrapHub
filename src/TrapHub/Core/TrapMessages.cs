@@ -59,7 +59,9 @@ public static class TrapMessages
 
     private static string Taking(TrapOutcome.Taking taking, bool isChinese)
     {
-        var text = taking.Count == 0 ? Texts.NothingToTake.Pick(isChinese) : Texts.Taking.Say(isChinese, taking.Count, taking.Floors);
+        var text = taking.Count == 0 ? Texts.NothingToTake.Pick(isChinese)
+            : taking.Count > 1 && taking.Floors == 1 ? Texts.TakingOneFloor.Say(isChinese, taking.Count)
+            : Texts.Taking.Say(isChinese, taking.Count, taking.Floors);
 
         return taking.RefusedCount > 0 ? text + " " + Texts.GameRefused.Say(isChinese, taking.RefusedCount) : text;
     }

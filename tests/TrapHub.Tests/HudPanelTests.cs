@@ -291,7 +291,8 @@ public class HudPanelTests
         Assert.Contains("Collect Stored catch \u00b7 Pantry3", tip);
         Assert.Contains("Bait with Carrot \u00b7 Pantry1", tip);
         Assert.Contains("RE-BAIT IS ON", tip);
-        Assert.Contains("4 traps on 1 floors, starting with this floor", tip);
+        Assert.Contains("4 traps on 1 floor", tip);
+        Assert.DoesNotContain("floors", tip);
         Assert.Contains("Live Capture Cage in Pantry breaks on its next catch", tip);
         Assert.Contains("Simple Bird Net in Attic has no bait left", tip);
 

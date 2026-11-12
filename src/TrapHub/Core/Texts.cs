@@ -20,15 +20,16 @@ public static class Texts
     public static readonly Phrase Gone = new("That trap is gone.", "这个陷阱已经不在了。");
     public static readonly Counted BaitedCount = new(new("Baited 1 trap.", "已为 {0} 个陷阱布饵。"), new("Baited {0} traps.", "已为 {0} 个陷阱布饵。"));
     public static readonly Counted AutoBaited = new(new("Auto re-bait: baited 1 trap.", "自动布饵：已为 {0} 个陷阱布饵。"), new("Auto re-bait: baited {0} traps.", "自动布饵：已为 {0} 个陷阱布饵。"));
-    public static readonly Phrase HadNoBait = new("{0} trap(s) had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。");
-    public static readonly Phrase GameRefused = new("The game refused {0} trap(s).", "游戏拒绝了 {0} 个陷阱。");
+    public static readonly Counted HadNoBait = new(new("1 trap had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。"), new("{0} traps had no allowed bait left.", "{0} 个陷阱没有可用的允许诱饵。"));
+    public static readonly Counted GameRefused = new(new("The game refused 1 trap.", "游戏拒绝了 {0} 个陷阱。"), new("The game refused {0} traps.", "游戏拒绝了 {0} 个陷阱。"));
     public static readonly Phrase BaitedOne = new("{0} baited with {1}.", "{0}已放置{1}作诱饵。");
     public static readonly Phrase NothingToBait = new("Every trap that can take bait has some.", "所有可布饵的陷阱都已有诱饵。");
     public static readonly Phrase AlreadyBaited = new("{0} already has bait.", "{0}已有诱饵。");
     public static readonly Phrase CantBait = new("{0} can't take bait now.", "{0}现在无法放置诱饵。");
     public static readonly Phrase NoPreset = new("{0} has no bait preset. Pick one in the Traps tab.", "{0}没有诱饵预设。请在「陷阱」页选择一个。");
     public static readonly Phrase NoBaitLeft = new("No allowed bait left for {0} (preset {1}).", "{0}没有可用的允许诱饵（预设「{1}」）。");
-    public static readonly Counted Taking = new(new("Collecting from 1 trap.", "正在从 {0} 个陷阱拾取猎物。"), new("Collecting from {0} traps on {1} floor(s).", "正在从 {0} 个陷阱拾取猎物（{1} 个楼层）。"));
+    public static readonly Counted Taking = new(new("Collecting from 1 trap.", "正在从 {0} 个陷阱拾取猎物。"), new("Collecting from {0} traps on {1} floors.", "正在从 {0} 个陷阱拾取猎物（{1} 个楼层）。"));
+    public static readonly Phrase TakingOneFloor = new("Collecting from {0} traps on 1 floor.", "正在从 {0} 个陷阱拾取猎物（1 个楼层）。");
     public static readonly Phrase NothingToTake = new("No catches to collect.", "没有可拾取的猎物。");
     public static readonly Phrase AlreadyTaking = new("No new catches: {0} already queued.", "没有新的猎物：{0} 个已在队列中。");
     public static readonly Phrase NothingToCheck = new("Nothing to check: no catches waiting and every trap that can take bait has some.", "无需巡查：没有待拾取的猎物，所有可布饵的陷阱都已有诱饵。");
@@ -43,8 +44,8 @@ public static class Texts
     public static readonly Phrase PresetSaved = new("Preset {0} saved.", "预设「{0}」已保存。");
     public static readonly Phrase PresetDeleted = new("Preset {0} deleted.", "预设「{0}」已删除。");
     public static readonly Phrase PresetBad = new("That preset could not be read.", "无法读取该预设。");
-    public static readonly Phrase AssignedOwn = new("{0} trap(s) now use {1}.", "{0} 个陷阱现在使用「{1}」。");
-    public static readonly Phrase AssignedDefault = new("{0} trap(s) now use their type's default.", "{0} 个陷阱现在使用类型默认预设。");
+    public static readonly Counted AssignedOwn = new(new("1 trap now uses {1}.", "{0} 个陷阱现在使用「{1}」。"), new("{0} traps now use {1}.", "{0} 个陷阱现在使用「{1}」。"));
+    public static readonly Counted AssignedDefault = new(new("1 trap now uses its type's default.", "{0} 个陷阱现在使用类型默认预设。"), new("{0} traps now use their type's default.", "{0} 个陷阱现在使用类型默认预设。"));
     public static readonly Phrase NoSave = new("Trap choices are kept per save, and this game has no save yet. Save the game first.", "陷阱的预设选择按存档保存，而这局游戏还没有存档。请先保存游戏。");
     public static readonly Phrase NotSaved = new("trap-hub.json could not be written, so the change lasts until the game is closed. See " + Log + ".", "无法写入 trap-hub.json，更改只在关闭游戏前有效。详见 " + Log + "。");
     public static readonly Counted AllowedCount = new(new("1 bait allowed.", "已允许 {0} 种诱饵。"), new("{0} baits allowed.", "已允许 {0} 种诱饵。"));
@@ -211,6 +212,8 @@ public static class Texts
         ("hRefill", new("Refill traps you empty", "为拾取后的陷阱补饵")),
         ("hRefillWith", new("refill with", "补饵：")),
         ("hFoot", new("{0} traps on {1} floors, starting with this floor", "{1} 个楼层的 {0} 个陷阱，从本层开始")),
+        ("hFootOneFloor", new("{0} traps on 1 floor", "1 个楼层的 {0} 个陷阱")),
+        ("hFootOne", new("1 trap", "1 个陷阱")),
         ("hIdle", new("Nothing to check: every trap is armed and baited.", "无需巡查：所有陷阱都已布置并有诱饵。")),
         ("hSkipBreaks", new("{0} in {1} breaks on its next catch, so it is emptied but not re-baited.", "{1}的{0}下次捕获就会损坏，只拾取不补饵。")),
         ("hSkipNoBait", new("{0} in {1} has no bait left, so it is skipped.", "{1}的{0}没有可用诱饵，将被跳过。")),
