@@ -76,7 +76,7 @@ public sealed class Plugin : BasePlugin
             log.Write);
 
         log.Write($"===== Trap Hub {Version} started");
-        GameKeys.Apply(hooks);
+        Adapters.GameKeys.Apply(hooks);
 
         if (isSoundsElsewhere) log.Write("Quiet Traps is installed, so it handles the catch sounds and Trap Hub's sound settings are not used");
         else SoundGate.Apply(hooks);
