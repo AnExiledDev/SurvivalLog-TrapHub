@@ -318,7 +318,7 @@
     '.th-row.th-e-red::before{background:var(--rd)}.th-row.th-e-or::before{background:var(--or)}',
     '.th-mid{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}',
     '.th-nm{font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.th-nm small{font-size:12px;color:var(--t3);margin-left:8px}',
-    '.th-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);white-space:nowrap;overflow:hidden}',
+    '.th-meta{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--t2);white-space:nowrap;overflow:hidden}.th-bt{min-width:0;overflow:hidden;text-overflow:ellipsis}',
     '.th-odds{margin-left:auto;display:flex;gap:8px;flex:none}.th-odd{display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--t2)}',
     '.th-end{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none}',
     '.th-wh{font-size:13px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
@@ -845,20 +845,20 @@
   function baitLine(trap) {
     var line = el('div', 'th-meta');
 
-    if (trap.prey) return put(line, el('span', 'th-green', say('caught', preyOf(trap.prey).name)));
+    if (trap.prey) return put(line, el('span', 'th-bt th-green', say('caught', preyOf(trap.prey).name)));
 
     if (trap.bait) {
       var bait = baitOf(trap.bait);
 
-      return put(line, icon(bait, 'th-i18'), el('span', '', bait.name));
+      return put(line, icon(bait, 'th-i18'), el('span', 'th-bt', bait.name));
     }
 
     if (trap.state === 'halted' || !trap.canBait) return line;
-    if (!trap.next) return put(line, el('span', 'th-red', say('nextNone')));
+    if (!trap.next) return put(line, el('span', 'th-bt th-red', say('nextNone')));
 
     var next = baitOf(trap.next);
 
-    return put(line, icon(next, 'th-i18'), el('span', 'th-or', say('nextShort', next.name)));
+    return put(line, icon(next, 'th-i18'), el('span', 'th-bt th-or', say('nextShort', next.name)));
   }
 
   function topOdds(trap) {
@@ -1508,7 +1508,7 @@
     fillAllowedSide();
   }
 
-  // One bait: whether traps may use it, the presets that list it, what it draws in and which traps take it.
+  // One bait: whether traps may use it, the presets that list it, what it attracts and which traps take it.
   function baitDetail(side, b) {
     var isOn = isAllowed(b.id);
     var uses = presetUses[b.id] || [];

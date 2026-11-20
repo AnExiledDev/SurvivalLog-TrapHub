@@ -4,7 +4,7 @@ using ExiledToolkit.Kit;
 
 namespace TrapHub.Core;
 
-/// <summary>What a trap's catch sound does: play as the game plays it, play a few seconds then go quiet, or never play.</summary>
+/// <summary>What a trap's catch sound does: play like it normally does, play a few seconds then go quiet, or never play.</summary>
 public enum SoundMode
 {
     Normal,

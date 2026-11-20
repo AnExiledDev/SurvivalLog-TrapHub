@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.6
+
+- In the trap list, a long bait name no longer hides the catch odds next to it.
+- Made for Survival Log 1.1.21671.
+
 ## 0.6.5
 
 - Clearer wording in the Trap Hub window, the messages and the settings, in English and Chinese.

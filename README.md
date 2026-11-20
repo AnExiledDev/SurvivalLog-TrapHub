@@ -25,7 +25,7 @@ Trap Hub does everything Trapline does, so install only one of them.
 
 ## Requirements
 
-- Survival Log 1.1.20719. The mod is built for this version, and a game update can break it until the mod is updated.
+- Survival Log 1.1.21671. The mod is built for this version, and a game update can break it until the mod is updated.
 - The [BepInEx Pack for Survival Log](https://www.nexusmods.com/survivallog/mods/12), the BepInEx 6 (IL2CPP) build for the game.
 - [Exiled's Toolkit](https://github.com/AnExiledDev/SurvivalLog-ExiledToolkit) 0.19.0 or newer. Trap Hub does not load without it. The Toolkit does several things for Trap Hub:
   - It turns off Trap Hub's keys while you type.
@@ -56,7 +56,7 @@ Settings live in `BepInEx\config\com.dev.survivallog.traphub.cfg`, created the f
 
 Built against BepInEx `6.0.0-be.788`.
 
-Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.6.5 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
+Check `BepInEx\LogOutput.log` for `===== Trap Hub 0.6.6 started`, followed by lines starting with `hooked`. A line starting with `could not hook` means part of the mod does not work on this game version.
 
 ## Known issues
 
