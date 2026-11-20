@@ -46,6 +46,7 @@
     <AssemblyMetadata Include="ModManager.GameVersion" Value="1.1.21671" />
     <AssemblyMetadata Include="ModManager.Settings" Value="Live" />
     <AssemblyMetadata Include="ModManager.GitHub" Value="AnExiledDev/SurvivalLog-TrapHub" />
+    <AssemblyMetadata Include="ModManager.NexusId" Value="142" />
     <AssemblyMetadata Include="ModManager.Changelog" Value="https://github.com/AnExiledDev/SurvivalLog-TrapHub/blob/main/CHANGELOG.md" />
   </ItemGroup>
 
