@@ -3,6 +3,9 @@
 ## 0.6.6
 
 - In the trap list, a long bait name no longer hides the catch odds next to it.
+- "Use the food closest to spoiling first" now picks the older of two stacks of the same food. It used to treat them as the same and could pick the fresh one.
+- The catches left on each trap now go up with your trapping skill right away, and loading another save uses that save's skill. Before, a trap could be shown as about to break when it wasn't, or auto re-bait could keep trying bait the game refuses.
+- If trap-hub.json can't be read, for example while another program has it open, Trap Hub now changes nothing and says so. Before, the next change replaced all your presets.
 - Made for Survival Log 1.1.21671.
 
 ## 0.6.5

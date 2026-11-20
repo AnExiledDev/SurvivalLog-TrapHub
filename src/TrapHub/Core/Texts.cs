@@ -47,6 +47,7 @@ public static class Texts
     public static readonly Counted AssignedOwn = new(new("1 trap now uses {1}.", "{0} 个陷阱现在使用「{1}」。"), new("{0} traps now use {1}.", "{0} 个陷阱现在使用「{1}」。"));
     public static readonly Counted AssignedDefault = new(new("1 trap now uses its type's default.", "{0} 个陷阱现在使用类型默认预设。"), new("{0} traps now use their type's default.", "{0} 个陷阱现在使用类型默认预设。"));
     public static readonly Phrase NoSave = new("Trap choices are kept per save, and this game has no save yet. Save the game first.", "陷阱的预设选择按存档保存，而这局游戏还没有存档。请先保存游戏。");
+    public static readonly Phrase NotRead = new("trap-hub.json could not be read, so nothing was changed. Close any program that has it open and try again. See " + Log + ".", "无法读取 trap-hub.json，所以没有做任何更改。请关闭打开它的程序后重试。详见 " + Log + "。");
     public static readonly Phrase NotSaved = new("trap-hub.json could not be written, so the change lasts until the game is closed. See " + Log + ".", "无法写入 trap-hub.json，更改只在关闭游戏前有效。详见 " + Log + "。");
     public static readonly Counted AllowedCount = new(new("1 bait allowed.", "已允许 {0} 种诱饵。"), new("{0} baits allowed.", "已允许 {0} 种诱饵。"));
     public static readonly Counted BlockedCount = new(new("1 bait blocked.", "已禁止 {0} 种诱饵。"), new("{0} baits blocked.", "已禁止 {0} 种诱饵。"));

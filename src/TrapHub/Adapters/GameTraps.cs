@@ -183,15 +183,17 @@ internal sealed class GameTraps : ITrapGame
         if (traps == null) return new TrapRead.NotReady(Texts.NoWorld.Pick(isChinese));
         if (!IsHome(agents)) return new TrapRead.NotReady(Texts.Away.Pick(isChinese));
 
-        var catalog = Catalog(config, traps, isChinese);
+        var built = Catalog(config, traps, isChinese);
 
-        if (catalog == null) return new TrapRead.NotReady(Texts.Loading.Pick(isChinese), IsStillLoading: true);
+        if (built == null) return new TrapRead.NotReady(Texts.Loading.Pick(isChinese), IsStillLoading: true);
+
+        var catalog = WithCatchCosts(built, config, traps);
 
         ForgetIfNewLoad(config, world);
 
         var roleId = role.InstanceId;
         var placed = ReadTraps(world, config, traps, catalog, roleId);
-        var stock = ReadStock(world._ItemManager, catalog, roleId);
+        var stock = ReadStock(world._ItemManager, catalog, roleId, world._GameTimeManager?.GetHour() ?? 0);
         var playerFloor = Floors.Level(agents.GetAgentFloor(roleId));
 
         return new TrapRead.Ready(new TrapWorld(catalog, placed, stock, ReadBonus(world), playerFloor, PositionOf(role), SaveSlot.CurrentKey()));
@@ -305,7 +307,7 @@ internal sealed class GameTraps : ITrapGame
     /// The bait the player can reach: their bag and every home storage the game counts for building costs. Storage the
     /// game keeps out of that pool (a trap's own store, set-apart chests) is skipped, as the game's bait list skips it.
     /// </summary>
-    private List<BaitUnit> ReadStock(ItemManager? items, TrapCatalog catalog, long roleId)
+    private List<BaitUnit> ReadStock(ItemManager? items, TrapCatalog catalog, long roleId, int hourNow)
     {
         var stock = new List<BaitUnit>();
         var available = items?.GetAllAvailableItems(roleId);
@@ -317,7 +319,7 @@ internal sealed class GameTraps : ITrapGame
             if (item == null || item.ItemCount <= 0 || !catalog.Baits.ContainsKey(item.ItemConfigId)) continue;
             if (item.OwnerId != roleId && ItemManager.IsExcludedFromCostPool(item.OwnerId)) continue;
 
-            stock.Add(new BaitUnit(item.InstanceId, item.ItemConfigId, item.ItemCount, item.OwnerId == roleId, item.TimeLeft > 0 ? item.TimeLeft : null));
+            stock.Add(new BaitUnit(item.InstanceId, item.ItemConfigId, item.ItemCount, item.OwnerId == roleId, BaitUnit.HoursLeftAt(item.StartTime, item.TimeLeft, hourNow)));
         }
 
         return stock;
@@ -454,6 +456,38 @@ internal sealed class GameTraps : ITrapGame
         var prey = preyIds.Select((id, i) => new PreyRate(id, i < rates.Count ? rates[i] : 0f)).ToList();
 
         return new TrapType(row.ID, name, Icons().Resolve(GameNames.NonEmpty(row.WebIcon)), row.Prey_Capacity > 0, CatchCost(traps, row), row.Empty_Weight, prey, Ints(row.Bait_id).ToHashSet());
+    }
+
+    /// <summary>
+    /// What a catch costs a trap goes down with trapping proficiency and, in endless mode, a talent, so it is player
+    /// state and is read on every read (one call per trap type). The cached catalog is replaced only when a cost moved,
+    /// so the page is sent a new catalog only then.
+    /// </summary>
+    private TrapCatalog WithCatchCosts(TrapCatalog catalog, ConfigManager config, TrapManager traps)
+    {
+        var rows = config._Config_Trap_Dict;
+
+        if (rows == null) return catalog;
+
+        Dictionary<int, TrapType>? types = null;
+
+        foreach (var row in rows.Values)
+        {
+            if (row == null || !catalog.Types.TryGetValue(row.ID, out var type)) continue;
+
+            var cost = CatchCost(traps, row);
+
+            if (cost == type.CatchCost) continue;
+
+            types ??= catalog.Types.ToDictionary(pair => pair.Key, pair => pair.Value);
+            types[row.ID] = type with { CatchCost = cost };
+        }
+
+        if (types == null) return catalog;
+
+        _catalog = catalog with { Types = types };
+
+        return _catalog;
     }
 
     private int CatchCost(TrapManager traps, Config_Trap row)

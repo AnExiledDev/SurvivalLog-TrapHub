@@ -58,8 +58,11 @@ internal sealed class PresetFileOnDisk
     {
         try
         {
-            File.Copy(_path, _path + ".unreadable", overwrite: true);
-            _log($"{_path} could not be read as presets; copied it to {_path}.unreadable and started fresh");
+            // A new name each time, so a second bad file never overwrites the first copy.
+            var copy = $"{_path}.unreadable-{DateTime.Now:yyyyMMdd-HHmmss}";
+
+            File.Copy(_path, copy, overwrite: true);
+            _log($"{_path} could not be read as presets; copied it to {copy} and started fresh");
         }
         catch (Exception ex)
         {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace TrapHub.Core;
@@ -56,7 +57,14 @@ public sealed record Trap(
     bool IsTakeQueued);
 
 /// <summary>One stack of a bait item the player owns, in the bag or in home storage. HoursLeft is null for food that never spoils.</summary>
-public sealed record BaitUnit(long InstanceId, int ItemId, int Count, bool IsInBag, int? HoursLeft);
+public sealed record BaitUnit(long InstanceId, int ItemId, int Count, bool IsInBag, int? HoursLeft)
+{
+    /// <summary>
+    /// Hours until a stack spoils, counted the way the game picks its own bait (TrapManager.PickEarliestExpiringBait):
+    /// the hour it started plus its time left, minus the hour now, never under 1. A time left of 0 or less never spoils.
+    /// </summary>
+    public static int? HoursLeftAt(int startTime, int timeLeft, int hourNow) => timeLeft <= 0 ? null : Math.Max(1, startTime + timeLeft - hourNow);
+}
 
 /// <summary>A bait item, with the multiplier it gives each prey (a prey it does not name gets 1, the same as the game).</summary>
 public sealed record BaitItem(int Id, string Name, string? Icon, BaitKind Kind, IReadOnlyDictionary<int, float> Coefficients)
@@ -66,7 +74,7 @@ public sealed record BaitItem(int Id, string Name, string? Icon, BaitKind Kind, 
 
 public sealed record PreyItem(int Id, string Name, string? Icon, bool IsRare);
 
-/// <summary>Everything that does not change while a save is played: trap types, baits, prey, rooms and room biases.</summary>
+/// <summary>Everything that does not change while a save is played: trap types, baits, prey, rooms and room biases. The one exception is a trap type's catch cost, which the game adapter reads again on every read.</summary>
 public sealed record TrapCatalog(
     IReadOnlyDictionary<int, TrapType> Types,
     IReadOnlyDictionary<int, BaitItem> Baits,

@@ -73,6 +73,27 @@ public class BaitPickTests
     }
 
     [Fact]
+    public void Of_two_stacks_with_the_same_time_left_the_older_one_spoils_first()
+    {
+        // Same item, same TimeLeft, but stack 2 was picked up 72 hours before stack 1. The game counts from the start
+        // hour, so stack 2 is the one about to spoil. Reading TimeLeft alone ties them, and the tie goes to stack 1.
+        var preset = Preset("p", Step(Meat));
+        var older = Bag(2, Meat, 3, hoursLeft: BaitUnit.HoursLeftAt(startTime: 100, timeLeft: 96, hourNow: 180));
+        var fresher = Bag(1, Meat, 3, hoursLeft: BaitUnit.HoursLeftAt(startTime: 172, timeLeft: 96, hourNow: 180));
+
+        Assert.Equal(2, Pick(preset, new[] { Meat }, fresher, older)?.InstanceId);
+        Assert.Equal(1, Pick(preset with { SpoilFirst = false }, new[] { Meat }, older, fresher)?.InstanceId);
+    }
+
+    [Fact]
+    public void Hours_left_count_from_the_start_hour_like_the_game()
+    {
+        Assert.Equal(16, BaitUnit.HoursLeftAt(startTime: 100, timeLeft: 96, hourNow: 180));
+        Assert.Equal(1, BaitUnit.HoursLeftAt(startTime: 100, timeLeft: 96, hourNow: 500));
+        Assert.Null(BaitUnit.HoursLeftAt(startTime: 100, timeLeft: 0, hourNow: 180));
+    }
+
+    [Fact]
     public void Bait_promised_to_one_trap_is_not_promised_to_the_next()
     {
         var preset = Preset("p", Step(Meat), Step(Carrot));
