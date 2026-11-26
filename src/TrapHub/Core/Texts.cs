@@ -17,6 +17,7 @@ public static class Texts
     public static readonly Phrase Away = new("you are away from home", "你不在家中");
     public static readonly Phrase Loading = new("the trap list is still loading", "陷阱列表仍在载入");
     public static readonly Phrase ReadFailed = new("the traps could not be read, see " + Log, "无法读取陷阱，详见 " + Log);
+    public static readonly Phrase PresetsNotRead = new("your presets in trap-hub.json could not be read. Close any program that has it open, and Trap Hub will try again within 10 seconds. See " + Log, "无法读取 trap-hub.json 中的预设。请关闭打开它的程序，Trap Hub 会在 10 秒内重试。详见 " + Log);
     public static readonly Phrase Gone = new("That trap is gone.", "这个陷阱已经不在了。");
     public static readonly Counted BaitedCount = new(new("Baited 1 trap.", "已为 {0} 个陷阱布饵。"), new("Baited {0} traps.", "已为 {0} 个陷阱布饵。"));
     public static readonly Counted AutoBaited = new(new("Auto re-bait: baited 1 trap.", "自动布饵：已为 {0} 个陷阱布饵。"), new("Auto re-bait: baited {0} traps.", "自动布饵：已为 {0} 个陷阱布饵。"));

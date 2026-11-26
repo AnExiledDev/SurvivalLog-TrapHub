@@ -17,14 +17,14 @@ namespace TrapHub.Adapters;
 /// </summary>
 internal static class SoundGate
 {
-    private const float OnceSeconds = 3f;
+    private const double OnceSeconds = 3;
 
     // Harmony patches are static, so their state is too. FMOD sounds are created and started on Unity's main thread.
     private static readonly Dictionary<IntPtr, string?> PathsByDescription = new();
-    private static readonly List<(EventInstance Instance, float StopAt)> Chiming = new();
+    private static readonly List<(EventInstance Instance, double StopAt)> Chiming = new();
     private static IReadOnlyDictionary<SoundGroup, SoundMode> _modes = new Dictionary<SoundGroup, SoundMode>();
     private static PatchKit? _hooks;
-    private static float _now;
+    private static double _now;
 
     // These hooks run on every sound the game makes, so they are put in only once a setting needs them, and each one
     // returns at once while no setting does.
@@ -67,7 +67,7 @@ internal static class SoundGate
     }
 
     /// <summary>Called once a frame: stops each chime-once sound whose few seconds are up.</summary>
-    public static void Tick(float now)
+    public static void Tick(double now)
     {
         _now = now;
 

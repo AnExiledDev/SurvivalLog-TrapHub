@@ -76,7 +76,7 @@ public class TrapRunTests
     {
         var game = new FakeGame { PlayerFloor = 1, Traps = { T(1, floor: 1), T(2, floor: 2) }, Stock = { Bag(1, Carrot, 5) } };
 
-        TrapRun.Auto(game, CarrotBook(AutoRebait.Nearby), now: 0f, new Dictionary<long, float>());
+        TrapRun.Auto(game, CarrotBook(AutoRebait.Nearby), now: 0, new Dictionary<long, double>());
 
         Assert.Equal(1L, game.Baited.Single().TrapId);
     }
@@ -87,8 +87,8 @@ public class TrapRunTests
         var always = new FakeGame { PlayerFloor = 1, Traps = { T(1, floor: 1), T(2, floor: 2) }, Stock = { Bag(1, Carrot, 5) } };
         var off = new FakeGame { Traps = { T(1) }, Stock = { Bag(1, Carrot, 5) } };
 
-        TrapRun.Auto(always, CarrotBook(AutoRebait.Always), now: 0f, new Dictionary<long, float>());
-        TrapRun.Auto(off, CarrotBook(AutoRebait.Off), now: 0f, new Dictionary<long, float>());
+        TrapRun.Auto(always, CarrotBook(AutoRebait.Always), now: 0, new Dictionary<long, double>());
+        TrapRun.Auto(off, CarrotBook(AutoRebait.Off), now: 0, new Dictionary<long, double>());
 
         Assert.Equal(2, always.Baited.Count);
         Assert.Empty(off.Baited);
@@ -98,16 +98,16 @@ public class TrapRunTests
     public void A_trap_auto_re_bait_could_not_fill_waits_a_minute_before_it_is_tried_again()
     {
         var game = new FakeGame { Traps = { T(1) }, Refusing = { 1 }, Stock = { Bag(1, Carrot, 5) } };
-        var retryAt = new Dictionary<long, float>();
+        var retryAt = new Dictionary<long, double>();
         var book = CarrotBook(AutoRebait.Always);
 
-        TrapRun.Auto(game, book, now: 0f, retryAt);
+        TrapRun.Auto(game, book, now: 0, retryAt);
         game.Refusing.Clear();
-        TrapRun.Auto(game, book, now: 30f, retryAt);
+        TrapRun.Auto(game, book, now: 30, retryAt);
 
         Assert.Empty(game.Baited);
 
-        TrapRun.Auto(game, book, now: 61f, retryAt);
+        TrapRun.Auto(game, book, now: 61, retryAt);
 
         Assert.Single(game.Baited);
     }

@@ -55,13 +55,13 @@ public static class TrapRun
     /// The auto pass: every empty trap whose preset re-baits on its own, on the player's floor for Nearby. A trap the
     /// game refused waits a minute before it is tried again, so a trap the game will not take bait in costs nothing.
     /// </summary>
-    public static TrapOutcome Auto(ITrapGame game, PresetBook book, float now, IDictionary<long, float> retryAt) =>
+    public static TrapOutcome Auto(ITrapGame game, PresetBook book, double now, IDictionary<long, double> retryAt) =>
         WithWorld(game, world => Auto(game, world, book, now, retryAt));
 
     /// <summary>The auto pass on a read the caller just made, so a refresh and its auto pass share one read of the game.</summary>
-    public static TrapOutcome Auto(ITrapGame game, TrapWorld world, PresetBook book, float now, IDictionary<long, float> retryAt)
+    public static TrapOutcome Auto(ITrapGame game, TrapWorld world, PresetBook book, double now, IDictionary<long, double> retryAt)
     {
-        const float RetrySeconds = 60f;
+        const double RetrySeconds = 60;
 
         return RebaitWhere(game, book, world, trap =>
         {

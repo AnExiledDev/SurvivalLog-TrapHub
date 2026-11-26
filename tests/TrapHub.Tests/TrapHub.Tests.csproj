@@ -11,9 +11,10 @@
     <ToolkitSrc>$([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName($([System.IO.Path]::GetDirectoryName('$(ToolkitDll)'))))))</ToolkitSrc>
   </PropertyGroup>
 
-  <!-- The pure core is compiled straight in, with the Toolkit's plain helpers it uses, so the tests need none of the game or BepInEx assemblies. -->
+  <!-- The pure core is compiled straight in, with the Toolkit's plain helpers it uses, so the tests need none of the game or BepInEx assemblies. The preset file is plain .NET too, so its tests run on a temp folder. -->
   <ItemGroup>
     <Compile Include="..\..\src\TrapHub\Core\*.cs" Link="Core\%(Filename)%(Extension)" />
+    <Compile Include="..\..\src\TrapHub\Adapters\PresetFileOnDisk.cs" Link="Adapters\PresetFileOnDisk.cs" />
     <Compile Include="$(ToolkitSrc)\Core\JsText.cs" Link="Toolkit\JsText.cs" />
     <Compile Include="$(ToolkitSrc)\Core\Phrase.cs" Link="Toolkit\Phrase.cs" />
   </ItemGroup>

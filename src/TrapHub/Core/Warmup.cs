@@ -30,7 +30,7 @@ public static class Warmup
         written += HudView.Ready(world, book, game.FloorCost, isRebait: false, "J").Length;
         written += PresetJson.ReadBook(PresetJson.WriteBook(book))?.Presets.Count ?? 0;
         written += new DrawnFrom(isPositionDrawn: true).IsSame(world, book) ? 1 : 0;
-        written += TrapMessages.Describe(TrapRun.Auto(game, world, book, 0f, new Dictionary<long, float>()), false, isAuto: true).Length;
+        written += TrapMessages.Describe(TrapRun.Auto(game, world, book, 0, new Dictionary<long, double>()), false, isAuto: true).Length;
         written += TrapMessages.Describe(TrapRun.CheckAll(game, book, onlyFloor: null, isRefill: true), false).Length;
         written += TrapMessages.Describe(TrapRun.TakeAll(game, onlyFloor: null), false).Length;
 

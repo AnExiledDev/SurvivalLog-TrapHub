@@ -1,5 +1,7 @@
 using System;
+using System.Globalization;
 using System.IO;
+using TrapHub.Core;
 
 namespace TrapHub.Adapters;
 
@@ -8,33 +10,62 @@ namespace TrapHub.Adapters;
 /// no room for a mod's data, so it lives here. A write goes to a temporary file first and is moved into place, so a
 /// crash mid-write cannot leave half a file.
 /// </summary>
-internal sealed class PresetFileOnDisk
+internal sealed class PresetFileOnDisk : IPresetFile
 {
     private readonly string _path;
-    private readonly Action<string> _log;
+    private readonly Func<DateTime> _now;
 
-    public PresetFileOnDisk(string path, Action<string> log)
+    public PresetFileOnDisk(string path, Func<DateTime> now)
     {
         _path = path;
-        _log = log;
+        _now = now;
     }
 
-    /// <summary>The file's text, "" when there is no file yet, or null when it is there but could not be read.</summary>
-    public string? Read()
+    public string Name => _path;
+
+    /// <summary>
+    /// Missing only when there is no file. File.Exists also says false for a file the mod may not read, and that file
+    /// must not be taken for a missing one, or a fresh book could be saved over it.
+    /// </summary>
+    public StoredText Read()
     {
         try
         {
-            return File.Exists(_path) ? File.ReadAllText(_path) : "";
+            return new StoredText.Found(File.ReadAllText(_path));
+        }
+        catch (Exception ex) when (ex is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return new StoredText.Missing();
         }
         catch (Exception ex)
         {
-            _log($"could not read the presets from {_path}: {ex.Message}");
-
-            return null;
+            return new StoredText.Failed(ex.Message);
         }
     }
 
-    public bool Replace(string text)
+    public bool TryCopyAside(out string copy, out string why)
+    {
+        // Named for the second it was made, and never copied over a file already there, so a second bad file cannot
+        // replace the first copy.
+        copy = _path + ".unreadable-" + _now().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+
+        try
+        {
+            File.Copy(_path, copy, overwrite: false);
+        }
+        catch (Exception ex)
+        {
+            why = ex.Message;
+
+            return false;
+        }
+
+        why = "";
+
+        return true;
+    }
+
+    public bool TryWrite(string text, out string why)
     {
         var temp = _path + ".tmp";
 
@@ -42,38 +73,16 @@ internal sealed class PresetFileOnDisk
         {
             File.WriteAllText(temp, text);
             File.Move(temp, _path, overwrite: true);
-
-            return true;
         }
         catch (Exception ex)
         {
-            _log($"could not save the presets to {_path}: {ex.Message}");
+            why = ex.Message;
 
             return false;
         }
-    }
 
-    /// <summary>
-    /// Keeps a file that could not be read as presets beside it, so starting over never destroys someone's work. False
-    /// means the copy failed, and the file must not be written over.
-    /// </summary>
-    public bool SetAside()
-    {
-        try
-        {
-            // A new name each time, so a second bad file never overwrites the first copy.
-            var copy = $"{_path}.unreadable-{DateTime.Now:yyyyMMdd-HHmmss}";
+        why = "";
 
-            File.Copy(_path, copy, overwrite: true);
-            _log($"{_path} could not be read as presets; copied it to {copy} and started fresh");
-
-            return true;
-        }
-        catch (Exception ex)
-        {
-            _log($"could not copy the unreadable presets aside, so the file is left as it is: {ex.Message}");
-
-            return false;
-        }
+        return true;
     }
 }

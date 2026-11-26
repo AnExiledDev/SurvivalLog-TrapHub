@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.8
+
+- If `trap-hub.json` can't be read, the Trap Hub window now says so. Before, it showed one "Any universal bait" preset, as if your presets were gone.
+- While `trap-hub.json` can't be read, Trap Hub tries it again every 10 seconds, and right away when you open the window or press a button. Before, it tried every second or two and wrote a line to the log each time.
+- A `trap-hub.json` that can't be read as presets is now replaced with a fresh one right after it's copied aside. Before, every start made another copy of it.
+- Esc no longer closes the Trap Hub window while you're typing in another mod's window.
+- Trap Hub does a little less work while you play.
+- Made for Survival Log 1.1.21671.
+
 ## 0.6.7
 
 - If `trap-hub.json` can't be read as presets and can't be copied aside either, Trap Hub now leaves it alone instead of saving over it.

@@ -17,10 +17,10 @@ namespace TrapHub.Adapters;
 /// </summary>
 internal sealed class TrapSession
 {
-    private const float OpenRefreshSeconds = 1f;
+    private const double OpenRefreshSeconds = 1;
     // Short enough that the HUD trap panel's rows and Check traps tip are close to what a press would do.
-    private const float ClosedRefreshSeconds = 2f;
-    private const float AutoSeconds = 5f;
+    private const double ClosedRefreshSeconds = 2;
+    private const double AutoSeconds = 5;
 
     /// <summary>The name the window holds the game's hotkeys and clicks under while it is open.</summary>
     private const string WindowName = "TrapHub.window";
@@ -29,16 +29,15 @@ internal sealed class TrapSession
     private readonly TrapPage _page;
     private readonly PageMailbox _messages = PageInbox.Listen(PageCommand.Prefix);
     private readonly WebKeyboard _keyboard = new();
-    private readonly PresetFileOnDisk _file;
+    private readonly PresetStore _presets;
     private readonly Action<SoundGroup, SoundMode> _saveSound;
     private readonly Action<bool> _saveRebait;
     private readonly Action<string> _log;
-    private readonly Dictionary<long, float> _retryAt = new();
+    private readonly Dictionary<long, double> _retryAt = new();
     private readonly Func<bool> _isPanelKeyDown;
     private readonly Func<bool> _isCheckKeyDown;
     private static readonly Func<bool> IsTypingAnywhere = () => ExiledToolkit.Typing.IsActive;
 
-    private PresetBook? _book;
     private KeyCode _panelKey;
     private bool _isPanelShifted;
     private KeyCode _checkKey;
@@ -53,8 +52,8 @@ internal sealed class TrapSession
     private int? _sentBadge;
     private string _sentHud = "";
     private bool? _sentLive;
-    private float _nextRefreshAt;
-    private float _nextAutoAt;
+    private double _nextRefreshAt;
+    private double _nextAutoAt;
     private TrapWorld? _lastWorld;
     private ViewSettings? _settings;
 
@@ -63,11 +62,11 @@ internal sealed class TrapSession
     private readonly DrawnFrom _hud = new(isPositionDrawn: true);
     private readonly DrawnFrom _view = new(isPositionDrawn: false);
 
-    public TrapSession(ITrapGame game, TrapPage page, PresetFileOnDisk file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
+    public TrapSession(ITrapGame game, TrapPage page, IPresetFile file, Action<SoundGroup, SoundMode> saveSound, Action<bool> saveRebait, Action<string> log)
     {
         _game = game;
         _page = page;
-        _file = file;
+        _presets = new PresetStore(file, () => Texts.FirstPresetName.Pick(IsChinese), () => Clock.Now, log);
         _saveSound = saveSound;
         _saveRebait = saveRebait;
         _log = log;
@@ -113,7 +112,7 @@ internal sealed class TrapSession
         _isRebaitOnCheck = isOn;
         _sentHud = "";
         _hud.Forget();
-        _nextRefreshAt = 0f;
+        _nextRefreshAt = 0;
     }
 
     /// <summary>The page may have lost what it shows, or a setting it shows changed: the next refresh draws everything again.</summary>
@@ -126,7 +125,7 @@ internal sealed class TrapSession
 
     public void Update()
     {
-        var now = Time.unscaledTime;
+        var now = Clock.Now;
 
         _page.KeepInstalled(now);
         SoundGate.Tick(now);
@@ -134,9 +133,9 @@ internal sealed class TrapSession
         TakeMessages();
 
         // The keys are asked about first and Shift only for a key that went down, so a quiet frame asks Unity little.
-        // The window's key wins when both keys are the same and Shift is not part of the window's key. A key typed into
-        // one of the game's text boxes (the item search), or into any mod's page, is text, not one of these keys.
-        if (!_keyboard.IsClaimed && !GameKeys.IsGameTyping)
+        // The window's key wins when both keys are the same and Shift is not part of the window's key. A key pressed in
+        // any text box, the game's item search included, belongs to the box.
+        if (!_keyboard.IsClaimed)
         {
             if (Hotkey.Fires(_panelKey != KeyCode.None, _isPanelKeyDown, IsTypingAnywhere))
             {
@@ -152,7 +151,7 @@ internal sealed class TrapSession
                 return;
             }
 
-            if (_isOpen && Input.GetKeyDown(KeyCode.Escape))
+            if (_isOpen && Input.GetKeyDown(KeyCode.Escape) && !IsTypingAnywhere())
             {
                 Close();
 
@@ -204,7 +203,7 @@ internal sealed class TrapSession
                 _sentCatalog = null;
                 _sentHud = "";
                 ForgetDrawn();
-                _nextRefreshAt = 0f;
+                _nextRefreshAt = 0;
                 break;
             case PageCommand.NoScript:
                 _page.Install();
@@ -263,45 +262,25 @@ internal sealed class TrapSession
         }
     }
 
+    /// <summary>The player's presets, or a stand-in while trap-hub.json cannot be read.</summary>
+    private PresetBook Book() => _presets.Book();
+
     /// <summary>
-    /// The presets are read from trap-hub.json the first time they are needed. A file that is there but is not a preset
-    /// file is copied aside before a fresh book replaces it, so nothing anyone wrote is lost. A file that could not be
-    /// read at all (another program has it locked), or could not be copied aside, is tried again next time, and the fresh
-    /// book used meanwhile is never written over it.
+    /// A changed book is used at once and written to disk; a failed write keeps it until the game closes, and says so. A
+    /// change made on the stand-in is dropped.
     /// </summary>
-    private PresetBook Book()
-    {
-        if (_book != null) return _book;
-
-        var text = _file.Read();
-
-        if (text == null) return PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
-
-        var book = string.IsNullOrWhiteSpace(text) ? null : PresetJson.ReadBook(text);
-
-        if (book == null && !string.IsNullOrWhiteSpace(text) && !_file.SetAside()) return PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
-
-        _book = book ?? PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
-        _log($"presets: {_book.Presets.Count}, allowed bait: {_book.Allowed.Count}");
-
-        return _book;
-    }
-
-    /// <summary>A changed book is used at once and written to disk; a failed write keeps it until the game closes, and says so.</summary>
     private void Keep(BookEdit edit)
     {
         var message = edit.Message;
 
-        if (edit.Book != null && _book == null)
+        if (edit.Book != null)
         {
-            // Book() could not read the file, so this edit was made on a stand-in book. Writing it would wipe the presets.
-            message = Texts.NotRead.Pick(IsChinese);
-        }
-        else if (edit.Book != null)
-        {
-            _book = edit.Book;
-
-            if (!_file.Replace(PresetJson.WriteBook(edit.Book))) message = Texts.NotSaved.Pick(IsChinese);
+            message = _presets.Keep(edit.Book) switch
+            {
+                KeepResult.NotSaved => Texts.NotSaved.Pick(IsChinese),
+                KeepResult.NotRead => Texts.NotRead.Pick(IsChinese),
+                _ => message,
+            };
         }
 
         _log(message);
@@ -338,7 +317,7 @@ internal sealed class TrapSession
     /// asks again next frame and leaves the HUD as it is. The auto pass uses the same read when it is due, and the game
     /// is read again only when the pass baited something.
     /// </remarks>
-    private void Refresh(float now)
+    private void Refresh(double now)
     {
         _nextRefreshAt = now + (_isOpen ? OpenRefreshSeconds : ClosedRefreshSeconds);
 
@@ -431,6 +410,8 @@ internal sealed class TrapSession
 
         _isOpen = true;
         InputGate.Opened(WindowName);
+        // The player just opened the window, so presets that could not be read are tried again now.
+        _presets.Retry();
         Show(read, isOpening: true);
         _log("window opened");
     }
@@ -462,6 +443,15 @@ internal sealed class TrapSession
 
                 _lastWorld = ready.World;
                 SendCatalog(ready.World.Catalog);
+
+                // The stand-in is not the player's presets. If the window showed it, the presets would look gone, and a
+                // change made on it could land on the real presets once the file reads again.
+                if (!_presets.IsRead)
+                {
+                    _view.Forget();
+                    view = TrapView.NotReady(Texts.NotReady.Say(IsChinese, Texts.PresetsNotRead.Pick(IsChinese)), Settings);
+                    break;
+                }
 
                 if (!isOpening && _view.IsSame(ready.World, book)) return;
 
@@ -501,7 +491,7 @@ internal sealed class TrapSession
     /// Re-baits the traps whose preset asks for it, every few seconds, on the read the refresh just made. Only a pass
     /// that baited something says so, as a toast, so a quiet base stays quiet. True when it said so.
     /// </summary>
-    private bool RunAuto(TrapWorld world, float now)
+    private bool RunAuto(TrapWorld world, double now)
     {
         _nextAutoAt = now + AutoSeconds;
 
@@ -556,6 +546,10 @@ internal sealed class TrapSession
         string message;
         TrapOutcome? outcome = null;
 
+        // The player just pressed something, so presets that could not be read are tried again now rather than up to
+        // 10 seconds later.
+        _presets.Retry();
+
         try
         {
             outcome = press();
@@ -569,7 +563,7 @@ internal sealed class TrapSession
         }
 
         Status(message);
-        Refresh(Time.unscaledTime);
+        Refresh(Clock.Now);
 
         return outcome;
     }

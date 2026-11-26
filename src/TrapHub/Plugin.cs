@@ -22,7 +22,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.7";
+    private const string Version = "0.6.8";
 
     /// <summary>Exiled's Toolkit: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
@@ -70,13 +70,12 @@ public sealed class Plugin : BasePlugin
         var session = new TrapSession(
             new GameTraps(log.Write),
             new TrapPage(log.Write),
-            new PresetFileOnDisk(Path.Combine(Paths.ConfigPath, PresetFileName), log.Write),
+            new PresetFileOnDisk(Path.Combine(Paths.ConfigPath, PresetFileName), () => DateTime.Now),
             (group, mode) => sounds[group].Value = Sounds.ModeName(mode),
             isOn => rebaitOnCheck.Value = isOn,
             log.Write);
 
         log.Write($"===== Trap Hub {Version} started");
-        Adapters.GameKeys.Apply(hooks);
 
         if (isSoundsElsewhere) log.Write("Quiet Traps is installed, so it handles the catch sounds and Trap Hub's sound settings are not used");
         else SoundGate.Apply(hooks);

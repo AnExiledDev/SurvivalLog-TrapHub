@@ -29,7 +29,7 @@ internal sealed class TrapPage
         };
     }
 
-    public void KeepInstalled(float now) => _page.KeepInstalled(now);
+    public void KeepInstalled(double now) => _page.KeepInstalled(now);
 
     public void Install() => _page.Install();
 

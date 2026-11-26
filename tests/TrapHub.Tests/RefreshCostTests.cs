@@ -140,7 +140,7 @@ public class RefreshCostTests
 
         game.ReadInstead = new TrapRead.NotReady("a read here would find nothing");
 
-        TrapRun.Auto(game, world, CarrotBook(AutoRebait.Always), now: 0f, new Dictionary<long, float>());
+        TrapRun.Auto(game, world, CarrotBook(AutoRebait.Always), now: 0, new Dictionary<long, double>());
 
         Assert.Equal(new[] { 1L, 2L }, game.Baited.Select(b => b.TrapId).OrderBy(id => id));
     }
