@@ -266,8 +266,8 @@ internal sealed class TrapSession
     /// <summary>
     /// The presets are read from trap-hub.json the first time they are needed. A file that is there but is not a preset
     /// file is copied aside before a fresh book replaces it, so nothing anyone wrote is lost. A file that could not be
-    /// read at all (another program has it locked) is tried again next time, and the fresh book used meanwhile is never
-    /// written over it.
+    /// read at all (another program has it locked), or could not be copied aside, is tried again next time, and the fresh
+    /// book used meanwhile is never written over it.
     /// </summary>
     private PresetBook Book()
     {
@@ -279,7 +279,7 @@ internal sealed class TrapSession
 
         var book = string.IsNullOrWhiteSpace(text) ? null : PresetJson.ReadBook(text);
 
-        if (book == null && !string.IsNullOrWhiteSpace(text)) _file.SetAside();
+        if (book == null && !string.IsNullOrWhiteSpace(text) && !_file.SetAside()) return PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
 
         _book = book ?? PresetBook.First(Texts.FirstPresetName.Pick(IsChinese));
         _log($"presets: {_book.Presets.Count}, allowed bait: {_book.Allowed.Count}");

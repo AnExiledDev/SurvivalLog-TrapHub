@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.7
+
+- If `trap-hub.json` can't be read as presets and can't be copied aside either, Trap Hub now leaves it alone instead of saving over it.
+- Made for Survival Log 1.1.21671.
+
 ## 0.6.6
 
 - In the trap list, a long bait name no longer hides the catch odds next to it.

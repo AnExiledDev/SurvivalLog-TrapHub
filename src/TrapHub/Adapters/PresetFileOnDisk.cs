@@ -53,8 +53,11 @@ internal sealed class PresetFileOnDisk
         }
     }
 
-    /// <summary>Keeps a file that could not be read as presets beside it, so starting over never destroys someone's work.</summary>
-    public void SetAside()
+    /// <summary>
+    /// Keeps a file that could not be read as presets beside it, so starting over never destroys someone's work. False
+    /// means the copy failed, and the file must not be written over.
+    /// </summary>
+    public bool SetAside()
     {
         try
         {
@@ -63,10 +66,14 @@ internal sealed class PresetFileOnDisk
 
             File.Copy(_path, copy, overwrite: true);
             _log($"{_path} could not be read as presets; copied it to {copy} and started fresh");
+
+            return true;
         }
         catch (Exception ex)
         {
-            _log($"could not copy the unreadable presets aside: {ex.Message}");
+            _log($"could not copy the unreadable presets aside, so the file is left as it is: {ex.Message}");
+
+            return false;
         }
     }
 }

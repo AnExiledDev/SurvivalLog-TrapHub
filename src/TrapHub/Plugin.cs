@@ -22,7 +22,7 @@ namespace TrapHub;
 public sealed class Plugin : BasePlugin
 {
     private const string Guid = "com.dev.survivallog.traphub";
-    private const string Version = "0.6.6";
+    private const string Version = "0.6.7";
 
     /// <summary>Exiled's Toolkit: its shared helpers, toasts, live settings, UI size and typing check all come from it.</summary>
     private const string ToolkitGuid = "com.dev.survivallog.exiledtoolkit";
